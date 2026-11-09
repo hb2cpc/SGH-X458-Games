@@ -12,6 +12,7 @@ import struct
 import zlib
 
 from tools import PROJECT_ROOT
+from tools.assets import chunk
 
 
 OUTPUT = PROJECT_ROOT / "src" / "sgh_x458" / "resources"
@@ -121,9 +122,6 @@ def render(size):
 
 
 def png_bytes(rows):
-    def chunk(tag, data):
-        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data))
-
     size = len(rows)
     raw = b"".join(b"\0" + bytes(v for pixel in row for v in pixel) for row in rows)
     header = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)

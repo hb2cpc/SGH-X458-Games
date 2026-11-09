@@ -110,7 +110,7 @@ def rgb565_surface(frame, size):
 
 
 class Sound:
-    def __init__(self, resolve_clip, enabled=True, sample_rate=44100, load_clip=None):
+    def __init__(self, resolve_clip, enabled=True, sample_rate=48000, load_clip=None):
         import pygame
 
         self.resolve_clip = resolve_clip
@@ -208,7 +208,7 @@ def write_record(path, record):
 
 def firmware_sound(assets, args):
     sound = Sound(lambda request: assets / "audio/firmware_wav" / f"{request.address:06X}.wav",
-                  enabled=not args.mute and args.volume > 0, sample_rate=48000)
+                  enabled=not args.mute and args.volume > 0)
     if sound.channel is not None:
         sound.channel.set_volume(args.volume / 100)
     return sound
@@ -219,10 +219,30 @@ def frame_time(clock, speed_quarters, remainder):
     return divmod(min(clock.tick(60), MAX_FRAME_MS) * speed_quarters + remainder, 4)
 
 
-def run_game_loop(game, screen, speed, handle_key, save_path, saved, *, on_close, resume_slot=None):
+class KeyControls:
+    """Default input: pass each key press to handle_key(key, game). Subclass for richer input."""
+
+    def __init__(self, handle_key):
+        self.handle_key = handle_key
+
+    def handle_event(self, event, game):
+        """Handle one pygame event; return True to close the game."""
+        import pygame
+
+        return event.type == pygame.KEYDOWN and self.handle_key(event.key, game) == 1
+
+    def advance(self, game, elapsed):
+        game.advance(elapsed)
+
+    def style_menu(self, frame):
+        return style_start_menu(frame)
+
+
+def run_game_loop(game, screen, speed, controls, save_path, saved, *, on_close, resume_slot=None):
     import pygame
 
     clock = pygame.time.Clock()
+    clock.tick()
     speed_quarters = SPEED_QUARTERS[speed]
     remainder = 0
     displayed = -1
@@ -237,13 +257,13 @@ def run_game_loop(game, screen, speed, handle_key, save_path, saved, *, on_close
                 break
             if event.type == pygame.WINDOWFOCUSGAINED:
                 pygame.key.stop_text_input()
-            if event.type == pygame.KEYDOWN and handle_key(event.key, game) == 1:
+            if controls.handle_event(event, game):
                 active = False
                 break
         if active:
-            game.advance(elapsed)
+            controls.advance(game, elapsed)
             if displayed != game.frame_number:
-                pixels = style_start_menu(game.frame) if game.ui_state == 0 else game.frame
+                pixels = controls.style_menu(game.frame) if game.ui_state == 0 else game.frame
                 draw_frame(screen, pixels)
                 displayed = game.frame_number
         if game.save != saved:

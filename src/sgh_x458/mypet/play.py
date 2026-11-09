@@ -5,7 +5,7 @@ import argparse
 import pygame
 
 from sgh_x458.runtime.desktop import (
-    WINDOW_SIZES, add_play_options, data_directory, firmware_sound, load_record, open_game_display, run_game_loop,
+    WINDOW_SIZES, KeyControls, add_play_options, data_directory, firmware_sound, load_record, open_game_display, run_game_loop,
 )
 from sgh_x458.runtime.keys import DIGITS, DIRECTIONS, WASD
 from sgh_x458.runtime.session import GAME_CONTROLLER, TIMER_ARGUMENT
@@ -45,7 +45,8 @@ def run(args):
         game.call(GAME_CONTROLLER, 1, TIMER_ARGUMENT[0])
         screen = open_game_display(WINDOW_SIZES[args.size])
         pygame.display.set_caption("我的宠物")
-        run_game_loop(game, screen, args.speed, handle_key, SAVE_PATH, saved, on_close=game.save_on_close)
+        run_game_loop(game, screen, args.speed, KeyControls(handle_key), SAVE_PATH, saved,
+                      on_close=game.save_on_close)
     finally:
         pygame.quit()
 

@@ -9,6 +9,7 @@ import re
 from struct import pack, unpack_from
 
 from sgh_x458.runtime.session import BOOT_DISPLAY, GAME_CONTROLLER
+from sgh_x458.runtime.word_ops import signed
 
 
 # Device services and library routines that the shared runtime implements in Python.
@@ -17,10 +18,6 @@ HAND_WRITTEN = {
     0x22815E, 0x228174, 0x2281F0, 0x228224, 0x2282C4, 0x2283A0, 0x2283AC,
     0x262954, 0x262998, 0x13FF800,
 }
-
-
-def signed(value, bits):
-    return (value ^ (1 << (bits - 1))) - (1 << (bits - 1))
 
 
 def number(value):

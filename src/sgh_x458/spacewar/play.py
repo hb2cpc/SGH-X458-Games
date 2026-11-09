@@ -6,7 +6,7 @@ from functools import partial
 import pygame
 
 from sgh_x458.runtime.desktop import (
-    DEFAULT_SPEED, WINDOW_SIZES, add_play_options, data_directory, firmware_sound,
+    DEFAULT_SPEED, WINDOW_SIZES, KeyControls, add_play_options, data_directory, firmware_sound,
     load_record, open_game_display, run_game_loop,
 )
 from sgh_x458.runtime.keys import DIGITS, DIRECTIONS, WASD, score_entry_key as handset_score_entry_key
@@ -96,7 +96,7 @@ def run(args):
             return handle_key(key, game)
 
         on_close = partial(slot.suspend, game, sound) if slot is not None else None
-        run_game_loop(game, screen, args.speed, desktop_key, save_path, saved,
+        run_game_loop(game, screen, args.speed, KeyControls(desktop_key), save_path, saved,
                       on_close=on_close, resume_slot=slot)
     finally:
         pygame.quit()

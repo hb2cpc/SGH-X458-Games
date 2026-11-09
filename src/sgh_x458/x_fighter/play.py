@@ -8,8 +8,8 @@ from functools import partial
 import pygame
 
 from sgh_x458.runtime.desktop import (
-    DEFAULT_SPEED, SPEED_QUARTERS, WINDOW_SIZES, Sound, add_play_options, data_directory, draw_frame,
-    frame_time, load_record, open_game_display, style_start_menu, write_record,
+    DEFAULT_SPEED, WINDOW_SIZES, KeyControls, Sound, add_play_options, data_directory, load_record,
+    open_game_display, run_game_loop, style_start_menu,
 )
 from sgh_x458.runtime.keys import DIGITS, WASD, score_entry_key
 from sgh_x458.runtime.resume import ResumeSlot
@@ -46,6 +46,82 @@ def phone_key(key, game):
     return {pygame.K_RETURN: 1, pygame.K_SPACE: 1}.get(key)
 
 
+class BattleControls(KeyControls):
+    """X-Fighter input: held movement keys, queued weapons, manual fire and the resume slot.
+
+    The firmware reads one key per battle update, so key presses during battle are
+    collected here and handed to Game.advance() instead of being sent immediately.
+    """
+
+    def __init__(self, slot, sound):
+        self.slot = slot
+        self.sound = sound
+        self.held = {}
+        self.pending_actions = deque()
+        self.fire_held = False
+
+    def stop_firing(self, game):
+        self.fire_held = game.primary_fire_requested = False
+
+    def handle_event(self, event, game):
+        if event.type == pygame.WINDOWFOCUSLOST:
+            self.held.clear()
+            self.pending_actions.clear()
+            self.stop_firing(game)
+        elif event.type == pygame.KEYUP:
+            self.held.pop(event.key, None)
+            if event.key == pygame.K_j:
+                self.fire_held = False
+        elif event.type == pygame.KEYDOWN:
+            return self.key_down(event.key, game)
+        return False
+
+    def key_down(self, key, game):
+        if game.ui_state == SCORE_ENTRY:
+            score_entry_key(key, game)
+            return False
+        in_battle = game.ui_state == 1 and game.state == 4 and bool(game.timers)
+        if key == pygame.K_j:
+            if in_battle:
+                self.fire_held = game.primary_fire_requested = True
+            return False
+        code = phone_key(key, game)
+        slot = self.slot
+        can_continue = slot is not None and slot.available
+        if game.ui_state == 0 and code == 4:
+            if can_continue and not slot.resume(game, self.sound):
+                game.rules.pop(ENTER_BATTLE, None)
+            return False
+        if code is None:
+            return False
+        starting = game.ui_state == 0 and code == 1 and can_continue
+        closing = False
+        if in_battle and code in (6, 9):
+            if code not in self.pending_actions:
+                self.pending_actions.append(code)
+        elif game.key(code) == 1:
+            closing = True
+        if starting and game.ui_state == 1:
+            slot.discard()
+        if code == 23:
+            self.pending_actions.clear()
+            self.stop_firing(game)
+        if in_battle and code in REPEATABLE:
+            self.held[key] = code
+        return closing
+
+    def advance(self, game, elapsed):
+        if self.fire_held:
+            game.primary_fire_requested = True
+        game.advance(elapsed, next(reversed(self.held.values()), None), self.pending_actions)
+        if game.ui_state != 1 or game.state != 4:
+            self.pending_actions.clear()
+            self.stop_firing(game)
+
+    def style_menu(self, frame):
+        return style_start_menu(frame, disable_continue=self.slot is None or not self.slot.available)
+
+
 def run(args):
     clips = json.loads((AUDIO_PATH / "playback.json").read_text(encoding="utf-8"))["clips"]
     # A normal menu start already grants three bombs and uses the standard leaderboard.
@@ -69,89 +145,18 @@ def run(args):
                                 upgraded=args.upgraded, shield=args.shield, bombs=bombs)
         screen = open_game_display(WINDOW_SIZES[args.size])
         pygame.display.set_caption("X-战机")
-        sound = Sound(lambda request: AUDIO_PATH / clips[f"{request.address:06X}"]["file"],
-                      not args.mute, sample_rate=48000,
+        sound = Sound(lambda request: AUDIO_PATH / clips[f"{request.address:06X}"]["file"], not args.mute,
                       load_clip=partial(load_game_clip, gain=args.volume / 100))
         game.on_audio = sound.play
         for event in startup_audio:
             sound.play(event)
-        clock = pygame.time.Clock()
-        clock.tick()
-        held = {}
-        pending_actions = deque()
-        fire_held = False
-        displayed = -1
-        active = True
-        speed_quarters = SPEED_QUARTERS[args.speed]
-        remainder = 0
-        while active:
-            elapsed, remainder = frame_time(clock, speed_quarters, remainder)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    if slot is not None:
-                        slot.suspend(game, sound, pending_equipment=ENTER_BATTLE in game.rules)
-                    active = False
-                    break
-                elif event.type == pygame.WINDOWFOCUSLOST:
-                    held.clear()
-                    pending_actions.clear()
-                    fire_held = game.primary_fire_requested = False
-                elif event.type == pygame.WINDOWFOCUSGAINED:
-                    pygame.key.stop_text_input()
-                elif event.type == pygame.KEYUP:
-                    held.pop(event.key, None)
-                    if event.key == pygame.K_j:
-                        fire_held = False
-                elif event.type == pygame.KEYDOWN:
-                    if game.ui_state == SCORE_ENTRY:
-                        score_entry_key(event.key, game)
-                        continue
-                    in_battle = game.ui_state == 1 and game.state == 4 and bool(game.timers)
-                    if event.key == pygame.K_j:
-                        if in_battle:
-                            fire_held = game.primary_fire_requested = True
-                        continue
-                    code = phone_key(event.key, game)
-                    can_continue = slot is not None and slot.available
-                    if game.ui_state == 0 and code == 4:
-                        if can_continue and not slot.resume(game, sound):
-                            game.rules.pop(ENTER_BATTLE, None)
-                        continue
-                    starting = game.ui_state == 0 and code == 1 and can_continue
-                    if code is not None:
-                        if in_battle and code in (6, 9):
-                            if code not in pending_actions:
-                                pending_actions.append(code)
-                        elif game.key(code) == 1:
-                            active = False
-                        if starting and game.ui_state == 1:
-                            slot.discard()
-                        if code == 23:
-                            pending_actions.clear()
-                            fire_held = game.primary_fire_requested = False
-                        if in_battle and code in REPEATABLE:
-                            held[event.key] = code
-            if not active:
-                break
-            if fire_held:
-                game.primary_fire_requested = True
-            game.advance(elapsed, next(reversed(held.values()), None), pending_actions)
-            if game.ui_state != 1 or game.state != 4:
-                pending_actions.clear()
-                fire_held = game.primary_fire_requested = False
-            if displayed != game.frame_number:
-                pixels = game.frame
-                if game.ui_state == 0:
-                    pixels = style_start_menu(pixels, disable_continue=slot is None or not slot.available)
-                draw_frame(screen, pixels)
-                displayed = game.frame_number
-            if scores != saved:
-                write_record(save_path, scores)
-                saved = bytes(scores)
+
+        def suspend():
             if slot is not None:
-                slot.update(game)
-        if scores != saved:
-            write_record(save_path, scores)
+                slot.suspend(game, sound, pending_equipment=ENTER_BATTLE in game.rules)
+
+        run_game_loop(game, screen, args.speed, BattleControls(slot, sound), save_path, saved,
+                      on_close=suspend, resume_slot=slot)
     finally:
         game.close()
         pygame.quit()

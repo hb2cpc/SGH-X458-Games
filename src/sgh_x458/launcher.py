@@ -7,13 +7,11 @@ import sys
 import tkinter as tk
 from importlib import import_module
 from importlib.util import find_spec
-from pathlib import Path
-from tempfile import NamedTemporaryFile
 from tkinter import font, messagebox, ttk
 
 from sgh_x458.runtime.desktop import (
     DEFAULT_SIZE, DEFAULT_SPEED, DEFAULT_VOLUME, ICON, SPEED_QUARTERS, WINDOW_SIZES, data_directory,
-    use_app_taskbar_icon,
+    use_app_taskbar_icon, write_record,
 )
 from sgh_x458.spacewar import layout as spacewar
 from sgh_x458.x_fighter import layout as x_fighter
@@ -96,15 +94,7 @@ def load_options():
 
 
 def save_options(options):
-    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    temp = NamedTemporaryFile("w", encoding="utf-8", dir=SETTINGS_PATH.parent, delete=False)
-    path = Path(temp.name)
-    try:
-        with temp:
-            json.dump(options, temp, ensure_ascii=False, indent=2)
-        path.replace(SETTINGS_PATH)
-    finally:
-        path.unlink(missing_ok=True)
+    write_record(SETTINGS_PATH, json.dumps(options, ensure_ascii=False, indent=2).encode("utf-8"))
 
 
 def number(value, label, limit, convert=int):
