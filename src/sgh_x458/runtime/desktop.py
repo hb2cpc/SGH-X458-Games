@@ -29,6 +29,8 @@ MAX_FRAME_MS = 100
 PIXEL = Struct("<H")
 # src/sgh_x458/runtime/desktop.py -> project root when running from a source checkout.
 SOURCE_ROOT = Path(__file__).resolve().parents[3]
+ICON = Path(__file__).resolve().parents[1] / "resources" / "icon.png"
+APP_ID = "SGH-X458-Games"
 
 # Number tiles use the same RGB565 entries across the three games and languages.
 MENU_KEY_COLORS = {
@@ -66,6 +68,14 @@ def data_directory():
     return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "SGH-X458-Games"
 
 
+def use_app_taskbar_icon():
+    """Group our windows under the project icon instead of python.exe's on the Windows taskbar."""
+    if sys.platform == "win32":
+        from ctypes import windll
+
+        windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+
+
 def open_game_display(size):
     import pygame
 
@@ -74,7 +84,9 @@ def open_game_display(size):
 
         # The game window handles control keys and has no text entry field.
         windll.imm32.ImmDisableIME(get_native_id())
+    use_app_taskbar_icon()
     pygame.display.init()
+    pygame.display.set_icon(pygame.image.load(str(ICON.with_suffix(".bmp"))))
     screen = pygame.display.set_mode(size)
     pygame.key.stop_text_input()
     return screen

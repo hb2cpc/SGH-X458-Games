@@ -25,6 +25,7 @@ sgh-x458 = "sgh_x458.launcher:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
+"sgh_x458" = ["resources/*"]
 "sgh_x458.x_fighter" = ["assets/**/*"]
 "sgh_x458.spacewar" = ["assets/**/*"]
 "sgh_x458.mypet" = ["assets/**/*"]

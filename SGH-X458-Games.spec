@@ -6,7 +6,7 @@ root = Path(SPECPATH).resolve()
 src = root / "src"
 games = ("x_fighter", "spacewar", "mypet")
 packed_dir = root / ".local" / "package-assets"
-datas = []
+datas = [(str(src / "sgh_x458" / "resources" / f"icon.{ext}"), "sgh_x458/resources") for ext in ("png", "bmp")]
 for game in games:
     # Bundle paths mirror the package so layout.ASSETS resolves inside the EXE.
     assets = Path("sgh_x458") / game / "assets"
@@ -62,5 +62,5 @@ exe = EXE(
     name="SGH-X458-Games",
     console=False,
     upx=False,
-    icon="NONE",
+    icon=str(src / "sgh_x458" / "resources" / "icon.ico"),
 )

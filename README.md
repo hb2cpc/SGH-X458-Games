@@ -1,3 +1,5 @@
+<p align="center"><img src="src/sgh_x458/resources/icon.png" width="128" alt="SGH-X458 游戏复刻图标"></p>
+
 # SGH-X458 游戏复刻
 
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
@@ -282,6 +284,7 @@ SGH-X458-Games/
 ├── src/sgh_x458/                游戏程序包
 │   ├── __main__.py              python -m sgh_x458 的入口，也是 EXE 的入口
 │   ├── launcher.py              Tk 图形启动器
+│   ├── resources/               项目图标：icon.png（启动器、README）、icon.bmp（游戏窗口）、icon.ico（EXE）
 │   ├── runtime/                 三款游戏共用的运行层
 │   │   ├── session.py           系统服务：定时器、声音、存档、画面提交、调度器调用
 │   │   ├── translated_runtime.py  执行翻译代码的循环、内存与 ROM 数据访问
@@ -309,6 +312,7 @@ SGH-X458-Games/
 │   ├── assets.py                位图、PNG 和 SMAF 导出
 │   ├── render_audio.py          调用 MA-3 引擎把 SMAF 渲染成 WAV（需 32 位 Python）
 │   ├── screenshots.py           生成 README 截图
+│   ├── make_icon.py             用像素画生成项目图标
 │   ├── x_fighter/               lift.py（重新生成）、extract_assets.py（完整导出）、verify*.py、trace.json
 │   ├── spacewar/                extract.py（重新生成）、oracle.py、verify.py、trace.json
 │   └── mypet/                   extract.py、probe.py／trace.py（追踪）、oracle.py、verify.py、trace.json
@@ -397,6 +401,7 @@ SGH-X458-Games/
 - **我的宠物重新追踪**：运行 `python -m tools.mypet.trace`，完整运行约 9 分钟。
 - **重新渲染 WAV**：需要 32 位 Windows Python 和 MA-3 引擎 DLL，见 [docs/x_fighter.md](docs/x_fighter.md)。
 - **重新生成 README 截图**：运行 `python -m tools.screenshots`。
+- **重新生成项目图标**：修改 `tools/make_icon.py` 中的像素画后运行 `python -m tools.make_icon`。图标是本项目原创的像素画，随代码一起以 MIT 许可发布。
 
 ## 常见问题
 

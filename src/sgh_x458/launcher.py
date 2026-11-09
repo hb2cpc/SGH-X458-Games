@@ -12,7 +12,8 @@ from tempfile import NamedTemporaryFile
 from tkinter import font, messagebox, ttk
 
 from sgh_x458.runtime.desktop import (
-    DEFAULT_SIZE, DEFAULT_SPEED, DEFAULT_VOLUME, SPEED_QUARTERS, WINDOW_SIZES, data_directory,
+    DEFAULT_SIZE, DEFAULT_SPEED, DEFAULT_VOLUME, ICON, SPEED_QUARTERS, WINDOW_SIZES, data_directory,
+    use_app_taskbar_icon,
 )
 from sgh_x458.spacewar import layout as spacewar
 from sgh_x458.x_fighter import layout as x_fighter
@@ -346,8 +347,10 @@ def main():
 
         # Let Tk 8.6 draw at the system DPI instead of stretching a 96-DPI window.
         windll.user32.SetProcessDPIAware()
+    use_app_taskbar_icon()
     window = tk.Tk()
     window.withdraw()
+    window.iconphoto(True, tk.PhotoImage(master=window, file=str(ICON)))
     Launcher(window)
     window.deiconify()
     window.mainloop()
