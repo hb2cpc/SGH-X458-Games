@@ -68,7 +68,7 @@ def run(args):
         game.configure_practice(invincible=args.invincible, auto_fire=not args.manual_fire,
                                 upgraded=args.upgraded, shield=args.shield, bombs=bombs)
         screen = open_game_display(WINDOW_SIZES[args.size])
-        pygame.display.set_caption("X-Fighter  |  Anycall SGH-X458")
+        pygame.display.set_caption("X-战机")
         sound = Sound(lambda request: AUDIO_PATH / clips[f"{request.address:06X}"]["file"],
                       not args.mute, sample_rate=48000,
                       load_clip=partial(load_game_clip, gain=args.volume / 100))

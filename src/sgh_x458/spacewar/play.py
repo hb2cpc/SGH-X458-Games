@@ -68,7 +68,7 @@ def run(args):
     saved = bytes(scores)
     try:
         screen = open_game_display(WINDOW_SIZES[args.size])
-        pygame.display.set_caption("空间大战  |  Anycall SGH-X458")
+        pygame.display.set_caption("空间大战")
         sound = firmware_sound(ASSETS, args)
         jump_to_stage = args.scene == "stage"
         game = Game(on_audio=None if jump_to_stage else sound.play,

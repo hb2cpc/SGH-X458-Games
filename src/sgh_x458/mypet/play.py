@@ -44,7 +44,7 @@ def run(args):
         # The firmware starts with a blank logo frame. Draw its first animation frame before showing the window.
         game.call(GAME_CONTROLLER, 1, TIMER_ARGUMENT[0])
         screen = open_game_display(WINDOW_SIZES[args.size])
-        pygame.display.set_caption("我的宠物  |  Anycall SGH-X458")
+        pygame.display.set_caption("我的宠物")
         run_game_loop(game, screen, args.speed, handle_key, SAVE_PATH, saved, on_close=game.save_on_close)
     finally:
         pygame.quit()
