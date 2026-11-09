@@ -22,6 +22,10 @@ DEFAULT_SIZE = "400x500"
 DEFAULT_VOLUME = 50
 DEFAULT_SPEED = "1"
 SPEED_QUARTERS = {"0.5": 2, "0.75": 3, "1": 4, "1.5": 6, "2": 8}
+# Longest wall-clock gap one frame may advance the game. Windows stops the event
+# loop while the window is dragged; without a cap the game would replay the
+# whole pause in a single frame the player never sees.
+MAX_FRAME_MS = 100
 PIXEL = Struct("<H")
 # src/sgh_x458/runtime/desktop.py -> project root when running from a source checkout.
 SOURCE_ROOT = Path(__file__).resolve().parents[3]
@@ -198,6 +202,11 @@ def firmware_sound(assets, args):
     return sound
 
 
+def frame_time(clock, speed_quarters, remainder):
+    """Game milliseconds for this frame at the chosen speed, and the carried remainder."""
+    return divmod(min(clock.tick(60), MAX_FRAME_MS) * speed_quarters + remainder, 4)
+
+
 def run_game_loop(game, screen, speed, handle_key, save_path, saved, *, on_close, resume_slot=None):
     import pygame
 
@@ -207,7 +216,7 @@ def run_game_loop(game, screen, speed, handle_key, save_path, saved, *, on_close
     displayed = -1
     active = True
     while active:
-        elapsed, remainder = divmod(clock.tick(60) * speed_quarters + remainder, 4)
+        elapsed, remainder = frame_time(clock, speed_quarters, remainder)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 if on_close is not None:

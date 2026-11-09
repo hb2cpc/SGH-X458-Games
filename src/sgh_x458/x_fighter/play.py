@@ -9,7 +9,7 @@ import pygame
 
 from sgh_x458.runtime.desktop import (
     DEFAULT_SPEED, SPEED_QUARTERS, WINDOW_SIZES, Sound, add_play_options, data_directory, draw_frame,
-    load_record, open_game_display, style_start_menu, write_record,
+    frame_time, load_record, open_game_display, style_start_menu, write_record,
 )
 from sgh_x458.runtime.keys import DIGITS, WASD, score_entry_key
 from sgh_x458.runtime.resume import ResumeSlot
@@ -85,7 +85,7 @@ def run(args):
         speed_quarters = SPEED_QUARTERS[args.speed]
         remainder = 0
         while active:
-            elapsed, remainder = divmod(clock.tick(60) * speed_quarters + remainder, 4)
+            elapsed, remainder = frame_time(clock, speed_quarters, remainder)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     if slot is not None:

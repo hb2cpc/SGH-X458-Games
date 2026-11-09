@@ -199,7 +199,7 @@ class Launcher:
             row=0, column=0, columnspan=2, sticky="w", pady=4)
         self.field(feature_box, 1, "武器等级", "weapon")
         self.field(feature_box, 2, "初始护盾", "shield")
-        self.field(feature_box, 3, "炸弹数量", "bombs", spin=(0, x_fighter.MAX_BOMBS, 1))
+        self.field(feature_box, 3, "炸弹数量", "bombs", spin=(0, x_fighter.MAX_BOMBS, 1)).configure(state="readonly")
         self.field(feature_box, 4, "游戏倍速", "speed")
 
         scene_box, feature_box = self.panels["spacewar"] = self.game_panels(panel)
