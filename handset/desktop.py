@@ -1,0 +1,221 @@
+"""Display and single-channel sound adapters shared by the phone game ports."""
+
+import os
+import sys
+from array import array
+from functools import lru_cache
+from pathlib import Path
+from struct import Struct
+from tempfile import NamedTemporaryFile
+from threading import get_native_id
+
+from .bitmap_draw import rgb565
+from .session import HEIGHT, SAVE_SIZE, WIDTH
+
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+
+
+WINDOW_SIZES = {"128x160": (128, 160), "200x250": (200, 250),
+                "300x375": (300, 375), "400x500": (400, 500)}
+DEFAULT_SIZE = "400x500"
+DEFAULT_VOLUME = 50
+DEFAULT_SPEED = "1"
+SPEED_QUARTERS = {"0.5": 2, "0.75": 3, "1": 4, "1.5": 6, "2": 8}
+PIXEL = Struct("<H")
+
+# Number tiles use the same RGB565 entries across the three games and languages.
+MENU_KEY_COLORS = {
+    0x0200: 0x19A3, 0x8710: 0xA635, 0xC7F8: 0xDFBC,
+    0xC698: 0x8410, 0xE7DC: 0x9CF3, 0xF7FE: 0xC618,
+}
+DISABLED_KEY_COLORS = {
+    0x0200: 0x8410, 0x8710: 0x9CF3, 0xC7F8: 0xC618,
+    0xFF9F: 0xCE59, 0xFFFF: 0xDEFB,
+}
+
+
+def style_start_menu(frame, *, disable_continue=False):
+    """Apply the shared number-tile palette to a desktop title frame."""
+    result = bytearray(frame)
+    for top in (75, 141):
+        for y in range(top, top + 19):
+            for x in range(WIDTH):
+                offset = (y * WIDTH + x) * PIXEL.size
+                color = PIXEL.unpack_from(frame, offset)[0]
+                if disable_continue and top == 141 and x < 12:
+                    styled = DISABLED_KEY_COLORS.get(color, color)
+                elif disable_continue and top == 141 and 12 <= x < 63 and color == 0:
+                    styled = 0xBDF7  # Disabled Continue label.
+                else:
+                    styled = MENU_KEY_COLORS.get(color, color)
+                PIXEL.pack_into(result, offset, styled)
+    return bytes(result)
+
+
+def data_directory(project_root):
+    if getattr(sys, "frozen", False):
+        return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "SGH-X458-Games"
+    return project_root / ".local"
+
+
+def open_game_display(size):
+    import pygame
+
+    if sys.platform == "win32":
+        from ctypes import windll
+
+        # The game window handles control keys and has no text entry field.
+        windll.imm32.ImmDisableIME(get_native_id())
+    pygame.display.init()
+    screen = pygame.display.set_mode(size)
+    pygame.key.stop_text_input()
+    return screen
+
+
+@lru_cache(maxsize=1)
+def rgb565_lookup():
+    return [bytes((*rgb565(value), 255)) for value in range(65536)]
+
+
+def rgb565_surface(frame, size):
+    import pygame
+
+    words = array("H")
+    words.frombytes(frame)
+    if sys.byteorder != "little":
+        words.byteswap()
+    colors = rgb565_lookup()
+    pixels = b"".join(colors[value] for value in words)
+    return pygame.image.frombytes(pixels, size, "RGBX")
+
+
+class Sound:
+    def __init__(self, resolve_clip, enabled=True, sample_rate=44100, load_clip=None):
+        import pygame
+
+        self.resolve_clip = resolve_clip
+        self.load_clip = load_sound_clip if load_clip is None else load_clip
+        self.channel = None
+        self.request = None
+        self.clips = {}
+        if enabled:
+            try:
+                pygame.mixer.init(frequency=sample_rate, size=-16, channels=2, buffer=512)
+            except pygame.error as error:
+                print(f"Audio unavailable: {error}", file=sys.stderr)
+            else:
+                self.channel = pygame.mixer.Channel(0)
+
+    def play(self, request):
+        if self.channel is None:
+            return
+        if request is None:
+            self.channel.stop()
+            self.request = None
+        elif request == "pause":
+            self.channel.pause()
+        elif request == "resume":
+            self.channel.unpause()
+        else:
+            path = self.resolve_clip(request)
+            if path not in self.clips:
+                self.clips[path] = self.load_clip(path)
+            self.channel.play(self.clips[path])
+            self.request = request
+
+    def active_request(self):
+        if self.channel is not None and self.channel.get_busy():
+            return self.request
+        return None
+
+
+def load_sound_clip(path):
+    import pygame
+
+    if getattr(sys, "frozen", False):
+        from io import BytesIO
+        from lzma import decompress
+
+        packed = path.with_suffix(path.suffix + ".xz").read_bytes()
+        return pygame.mixer.Sound(file=BytesIO(decompress(packed)))
+    return pygame.mixer.Sound(path)
+
+
+def add_play_options(parser, *, language_help=None):
+    parser.add_argument("--size", choices=WINDOW_SIZES, default=DEFAULT_SIZE)
+    parser.add_argument("--volume", type=int, default=DEFAULT_VOLUME)
+    parser.add_argument("--mute", action="store_true")
+    parser.add_argument("--language", type=int, choices=range(3), default=1, help=language_help)
+    parser.add_argument("--speed", choices=SPEED_QUARTERS, default=DEFAULT_SPEED)
+
+
+def draw_frame(screen, pixels):
+    import pygame
+
+    frame = rgb565_surface(pixels, (WIDTH, HEIGHT))
+    screen.blit(pygame.transform.scale(frame, screen.get_size()), (0, 0))
+    pygame.display.flip()
+
+
+def load_record(path, label):
+    try:
+        data = path.read_bytes()
+    except FileNotFoundError:
+        return bytearray(SAVE_SIZE)
+    if len(data) != SAVE_SIZE:
+        raise ValueError(f"Invalid {label} file: {path}")
+    return bytearray(data)
+
+
+def write_record(path, record):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    output = NamedTemporaryFile(dir=path.parent, delete=False)
+    temp = Path(output.name)
+    try:
+        with output:
+            output.write(record)
+        temp.replace(path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def firmware_sound(assets, args):
+    sound = Sound(lambda request: assets / "audio/firmware_wav" / f"{request.address:06X}.wav",
+                  enabled=not args.mute and args.volume > 0, sample_rate=48000)
+    if sound.channel is not None:
+        sound.channel.set_volume(args.volume / 100)
+    return sound
+
+
+def run_game_loop(game, screen, speed, handle_key, save_path, saved, *, on_close, resume_slot=None):
+    import pygame
+
+    clock = pygame.time.Clock()
+    speed_quarters = SPEED_QUARTERS[speed]
+    remainder = 0
+    displayed = -1
+    active = True
+    while active:
+        elapsed, remainder = divmod(clock.tick(60) * speed_quarters + remainder, 4)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                if on_close is not None:
+                    on_close()
+                active = False
+                break
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                pygame.key.stop_text_input()
+            if event.type == pygame.KEYDOWN and handle_key(event.key, game) == 1:
+                active = False
+                break
+        if active:
+            game.advance(elapsed)
+            if displayed != game.frame_number:
+                pixels = style_start_menu(game.frame) if game.ui_state == 0 else game.frame
+                draw_frame(screen, pixels)
+                displayed = game.frame_number
+        if game.save != saved:
+            write_record(save_path, game.save)
+            saved = bytes(game.save)
+        if resume_slot is not None:
+            resume_slot.update(game)

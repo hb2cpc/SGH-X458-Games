@@ -1,0 +1,6 @@
+* text=auto
+
+# Keep the verified firmware bytes and the generator's output line endings.
+/firmware/*.s3 binary
+/*/game_flow.py text eol=lf
+/*/assets/manifest.json -text

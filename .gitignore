@@ -1,0 +1,7 @@
+/.venv/
+.local/
+/.workbuddy/
+__pycache__/
+*.py[cod]
+/build/
+/dist/

@@ -1,0 +1,129 @@
+{
+  "clips": {
+    "5A4FEC": {
+      "event": "stage_start",
+      "file": "firmware_wav/5A4FEC.wav",
+      "return_addresses": [
+        "2346A8"
+      ],
+      "sha256": "b58e1fca13272b952dcbd8a568ba26eed362329e40b7dcb3ea1559cd077a11ae"
+    },
+    "5A542E": {
+      "event": "boss_appearance",
+      "file": "firmware_wav/5A542E.wav",
+      "return_addresses": [
+        "231C54",
+        "2323C6",
+        "232AC2"
+      ],
+      "sha256": "ef73c043fd70b7ce4240fbbcf7a449f7e6f744c579fb55fb00dcd26fa47d5551"
+    },
+    "5A5C69": {
+      "event": "boss_defeated",
+      "file": "firmware_wav/5A5C69.wav",
+      "return_addresses": [
+        "2303F6"
+      ],
+      "sha256": "f199e07d468c655f4f364c903633fbf43bd99f250d7bd8b90e02ece5b2e8be1e"
+    },
+    "5A5FDE": {
+      "event": "enemy_destroyed",
+      "file": "firmware_wav/5A5FDE.wav",
+      "return_addresses": [
+        "230232",
+        "2302A8"
+      ],
+      "sha256": "dba21c81b2c3f74d136e629028059d8e47ac24a8811c8d7d9f3e0601c0a50ede"
+    },
+    "5A62F0": {
+      "event": "title_theme",
+      "file": "firmware_wav/5A62F0.wav",
+      "return_addresses": [
+        "235A76",
+        "23442C"
+      ],
+      "sha256": "f65a892562dd21aa3513266f975857495ce8da274f701ff649b687b83587bd34"
+    },
+    "5A6FA8": {
+      "event": "pickup_collect",
+      "file": "firmware_wav/5A6FA8.wav",
+      "return_addresses": [
+        "2300D6"
+      ],
+      "sha256": "a49332b378208ab925ef1397b088ee4a8e41a29cc9ede968ae8a84c71fc6588a"
+    },
+    "5A7066": {
+      "event": "game_over",
+      "file": "firmware_wav/5A7066.wav",
+      "return_addresses": [
+        "235636"
+      ],
+      "sha256": "ed1c56cf5f000c0075010e9c3f648a5e11714db89a7dd4b79911e646d4d0cbcf"
+    },
+    "5A7E46": {
+      "event": "player_destroyed",
+      "file": "firmware_wav/5A7E46.wav",
+      "return_addresses": [
+        "2302FE"
+      ],
+      "sha256": "96be2fd07301d9af6e5c0f514816f5458319403cffa7d2a1c4257d49a371cb62"
+    },
+    "5A7F77": {
+      "event": "aircraft_select",
+      "file": "firmware_wav/5A7F77.wav",
+      "return_addresses": [
+        "235B98",
+        "235BAA"
+      ],
+      "sha256": "916a156e728bddd0931a85bc01a536724ddd0aa5a5acfcf8222dfcb61164ab57"
+    },
+    "5A800D": {
+      "event": "player_screen_attack",
+      "file": "firmware_wav/5A800D.wav",
+      "return_addresses": [
+        "22FE8E"
+      ],
+      "sha256": "582528fae1fd622593642b53ffb0ea467c92be13fb5d5619d9993e0c67b17a13"
+    },
+    "5A8489": {
+      "event": "player_missile_launch",
+      "file": "firmware_wav/5A8489.wav",
+      "return_addresses": [
+        "2336BC"
+      ],
+      "sha256": "9360f7e5132506f48bae2847593e482a6c032205c70e1c1d5637fac987f7fde9"
+    },
+    "5A91C0": {
+      "event": "player_bullet_hit",
+      "file": "firmware_wav/5A91C0.wav",
+      "return_addresses": [
+        "23049A"
+      ],
+      "sha256": "96ee94e797cf9e3a686db4c2368ee6841e091c928c41a12ecfda1b89ccdf7e71"
+    },
+    "5AA02A": {
+      "event": "player_missile_hit",
+      "file": "firmware_wav/5AA02A.wav",
+      "return_addresses": [
+        "2332AE"
+      ],
+      "sha256": "bf00c5947d32732839fbf6b203378e791057c78f97ec2454ce46ee6c2b342b8e"
+    },
+    "5AA677": {
+      "event": "boss_missile_launch",
+      "file": "firmware_wav/5AA677.wav",
+      "return_addresses": [
+        "233B02"
+      ],
+      "sha256": "0f6d9ccaa028ee100e19de6c23699d97ff201cbaf90c638f6a1d828119f0e287"
+    },
+    "5AB578": {
+      "event": "boss_laser_fire",
+      "file": "firmware_wav/5AB578.wav",
+      "return_addresses": [
+        "233B4E"
+      ],
+      "sha256": "1b27351341e7bf99d9c7227240b625bdb0dfee1e1c331febca2315b53d7ad635"
+    }
+  }
+}
