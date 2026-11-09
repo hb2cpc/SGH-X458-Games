@@ -7,6 +7,8 @@ name = "sgh-x458-games"
 version = "1.0.0"
 description = "Desktop ports of the three Anycall SGH-X458 firmware games"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = ["pygame-ce==2.5.8"]
 

@@ -1,112 +1,170 @@
-# Anycall SGH-X458 游戏复刻
+# SGH-X458 游戏复刻
 
-双击根目录 `run.bat` 打开启动器，再选择《X-战机》《空间大战》或《我的宠物》。
+把三星 Anycall SGH-X458 手机固件里的三款内置游戏，复刻成可以在电脑上运行的 Python 程序：
 
-## Windows 单文件版
+- **X-战机**：纵版射击，三个关卡，各有 Boss。
+- **空间大战**：圈地揭图，共十关。
+- **我的宠物**：电子宠物，状态随真实时间变化。
 
-把 `dist/SGH-X458-Games.exe` 复制到另一台 64 位 Windows 电脑即可双击运行。EXE 内置 Python、三款游戏和运行素材，设置与存档写入 `%LOCALAPPDATA%\SGH-X458-Games`。
+本项目不是模拟器，不运行手机的 ARM 代码。游戏逻辑由工具从固件的 Thumb 机器码逐条翻译成 Python；画面和音频直接从固件提取。复刻结果用 [Unicorn](https://www.unicorn-engine.org/) 运行原版 ARM 代码逐帧对照：在测试覆盖的场景中，画面、游戏状态、定时器、音频请求和存档字节都与原版一致。
 
-在已安装项目依赖的 Windows x64 Python 3.12 环境中，可以用以下命令重新构建。
+| 游戏 | 固件内部名 | 说明 |
+|---|---|---|
+| X-战机 | G58 AirShooting | [docs/x_fighter.md](docs/x_fighter.md) |
+| 空间大战 | G94 SpaceWar | [docs/spacewar.md](docs/spacewar.md) |
+| 我的宠物 | G133 MyPet | [docs/mypet.md](docs/mypet.md) |
+
+## 快速开始
+
+需要 Windows 和 Python 3.12。项目主要在 Windows 上开发和测试。克隆仓库后，在项目根目录运行：
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+装好后双击 `run.bat` 打开启动器，选择游戏、窗口尺寸和音量，再点「启动游戏」。
+
+也可以在命令行运行：
+
+```powershell
+.\.venv\Scripts\python.exe -m sgh_x458             # 启动器
+.\.venv\Scripts\python.exe -m sgh_x458.x_fighter   # 直接进入 X-战机
+.\.venv\Scripts\python.exe -m sgh_x458.spacewar    # 直接进入空间大战
+.\.venv\Scripts\python.exe -m sgh_x458.mypet       # 直接进入我的宠物
+```
+
+每个游戏都支持 `--help` 查看参数，例如 `--size 300x375` 设置窗口尺寸，`--volume 30` 设置音量，`--mute` 静音，`--speed 1.5` 设置倍速，`--language 0` 切换英文（`1` 简体中文，为默认值；`2` 繁体中文）。
+
+## 启动器功能
+
+- **共用设置**：窗口尺寸有 128×160（原始分辨率）、200×250、300×375、400×500 四档，最近邻缩放；可调音量或静音。
+- **X-战机**：可从标题菜单开始，或直接跳到某一关的指定战斗进度或 Boss 战，并选择战机。可开启无敌，设置开局武器强化、初始护盾和炸弹数量（0–10），以及 0.5×–2× 倍速。
+- **空间大战**：可直接进入第 1–10 关，设置初始后备机（0–100）、开局道具、无敌和倍速。
+- **我的宠物**：倍速。
+
+两款战斗游戏只要改动过上述任一选项（倍速也算），成绩就记入单独的练习排行榜，不影响正式排行榜。
+
+## 操作
+
+| 场景 | X-战机 | 空间大战 | 我的宠物 |
+|---|---|---|---|
+| 标题菜单 | Enter／1 开始，2 最高分，3 帮助，4 继续 | 同左 | Enter／1 开始，3 帮助，4 继续存档 |
+| 移动 | 方向键／WASD | 方向键／WASD，点按一次后持续移动 | ←／→ 选图标 |
+| 动作 | 普通子弹自动发射；Z／空格 导弹，X 核弹 | 空格／5 停止移动 | Enter／空格 确认 |
+| 暂停与返回 | Esc／Backspace | Esc 暂停，Enter／4 恢复 | Esc 返回 |
+| 成绩录入 | 直接键入字母、数字、空格；Backspace 删除，Enter 保存 | 同左 | — |
+
+手机原有的数字键操作同样可用，主键盘和小键盘都行。各游戏的完整按键说明见启动器下方或 `docs/` 中的文档。
+
+## 存档
+
+- **两款战斗游戏**：从标题菜单开始的游戏，关闭窗口时自动保存进度；下次用相同设置打开后，在标题菜单按 4 继续。
+- **我的宠物**：使用固件自己的存档。
+- **存档位置**：从源码运行时在项目根目录的 `.local/`；单文件 EXE 写在 `%LOCALAPPDATA%\SGH-X458-Games`。
+
+## 工作原理
+
+```text
+firmware/X458ZCEK1.s3 ──► tools/<game>/trace.json   用 Unicorn 运行原版代码，记录执行过的代码块与数据读取
+                      ──► lift／extract              把 Thumb 指令翻译成 game_flow.py，打包所需的 ROM 数据，
+                                                     导出图像清单和原始 SMAF 音频
+                      ──► tools/render_audio         用 Yamaha MA-3 引擎把 SMAF 渲染成 WAV
+
+src/sgh_x458/runtime  ◄── game_flow.py + assets/  用 Python 实现手机系统服务（定时器、绘图、音频、存档），
+        │                                         再交给 pygame 显示
+        └──► tools/<game>/verify                  与 Unicorn 运行的原版代码逐帧对照
+```
+
+- **翻译代码**：`game_flow.py` 保留了固件地址、寄存器和内存布局，便于对照反汇编逐段核对，请勿手改，需要时用 `tools/` 重新生成。
+- **玩法改动**：通过 `game.py` 中按固件地址覆盖例程实现。X-战机的战斗规则另在 `game_rules.py` 里用具名函数重写。
+- **出错时直接报错**：运行中如果遇到未翻译的代码或未打包的数据，程序会报错退出，不会悄悄算错。
+
+## 与原版的差异
+
+以下是有意为之的桌面适配，不属于复刻偏差：
+
+- **成绩录入**：直接键盘输入，不再用手机九宫格多次按键选字。
+- **标题菜单配色**：数字按钮的颜色在桌面上重新着色。
+- **X-战机音效**：5 段音效按真机录音削减低频并降低音量；激光连续坠机的音效间隔按真机录音设为 382 毫秒。
+- **X-战机操作**：长按移动时，导弹和核弹指令会排队，每次战斗更新执行一个。
+- **额外功能**：关窗保存进度、倍速、无敌、跳关、练习排行榜，都是原版没有的功能。
+- **窗口卡顿保护**：每帧最多推进 100 毫秒，窗口卡住（例如拖动窗口）后不会一次补跑大量游戏更新。
+- **声音与显示**：声音由 MA-3 软件引擎渲染，不是真机芯片的原声；颜色按 RGB565 线性换算，未模拟手机 LCD 的显示特性。
+
+尚待真机实测的项目：屏幕颜色、扬声器音色、空间大战十关自然通关，以及我的宠物长期养成的结果。
+
+## 项目结构
+
+```text
+src/sgh_x458/
+  launcher.py              Tk 启动器
+  runtime/                 三款游戏共用的系统服务、位图绘制、整数运算、桌面适配和成绩录入
+  x_fighter/ spacewar/ mypet/
+    play.py                桌面入口
+    game.py                游戏类，在这里覆盖固件例程
+    layout.py              资源路径、ROM 区间、RAM 地址
+    game_flow.py           从固件翻译的代码（生成物）
+    assets/                runtime-data.bin、manifest.json、WAV 和原始 MMF
+tools/                     离线追踪、翻译、资源导出、音频渲染和固件对照
+docs/                      各游戏说明、固件与逆向记录
+firmware/                  原始刷机镜像 X458ZCEK1.s3
+```
+
+## 开发
+
+### 安装开发依赖
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[tools]"
+```
+
+`[tools]` 会安装 Unicorn，用于运行离线对照。
+
+### 固件对照验证
+
+```powershell
+.\.venv\Scripts\python.exe -B -m tools.x_fighter.verify_source --compare-rom --all-stages
+.\.venv\Scripts\python.exe -B -m tools.x_fighter.verify --all-stages
+.\.venv\Scripts\python.exe -B -m tools.spacewar.verify
+.\.venv\Scripts\python.exe -B -m tools.mypet.verify
+```
+
+修改 `runtime/`、`game.py` 或 `game_rules.py` 后，请重新运行对应的验证。`tools.x_fighter.verify --all-stages` 要在原版代码里打完三个 Boss，约需 20 分钟；其余每条在 2 分钟以内。
+
+### 重新生成翻译代码和素材
+
+```powershell
+.\.venv\Scripts\python.exe -B -m tools.x_fighter.lift
+.\.venv\Scripts\python.exe -B -m tools.spacewar.extract
+.\.venv\Scripts\python.exe -B -m tools.mypet.extract
+```
+
+这些命令会根据 `tools/<game>/trace.json` 和固件重新生成 `game_flow.py` 和 `assets/`。在现有追踪数据下，重新生成的结果与仓库中的文件逐字节相同。重新渲染 WAV 需要 32 位 Windows Python 和 MA-3 引擎 DLL，见 [docs/x_fighter.md](docs/x_fighter.md)。
+
+### 构建 Windows 单文件 EXE
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -e ".[build]"
 .\.venv\Scripts\python.exe -m PyInstaller --noconfirm --workpath .local\package-build SGH-X458-Games.spec
 ```
 
-## 安装与启动选项
+生成的 `dist/SGH-X458-Games.exe` 内含 Python、三款游戏和全部素材，复制到其他 64 位 Windows 电脑上可以直接运行。
 
-三个游戏共用根目录的 `.venv` 和 `src/sgh_x458/` 下的启动器与运行层，游戏代码和素材放在各自的子包。启动器可选窗口尺寸和音量。《X-战机》支持场景跳转、练习、无敌和倍速，《空间大战》支持选关、初始后备机、道具、无敌和倍速，《我的宠物》支持倍速。默认窗口 400×500，默认音量 50%，设置在启动游戏时保存至 `.local/launcher.json`。
+### 深入资料
 
-从标题菜单开始的游戏会在关窗时保存进度。使用相同游戏设置重开后，在标题菜单按 `4` 或小键盘 `4` 继续，按 `1` 开始新游戏。两款战斗游戏的正式模式与练习模式分别保存。选择战斗进度、Boss 战或直接进入关卡时，每次都从选定的场景开局。
+- [固件与共用调度](docs/firmware.md)：固件格式、游戏注册表、系统服务地址和逆向方法。
+- [X-战机](docs/x_fighter.md)、[空间大战](docs/spacewar.md)、[我的宠物](docs/mypet.md)：各游戏的资源区间、逆向记录和验证范围。
 
-如果需要重新创建环境，在项目根目录使用 Python 3.12 运行以下命令。依赖定义在 `pyproject.toml`；`[tools]` 额外安装离线对照用的 Unicorn，只玩游戏可以省略。
+## 许可与声明
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[tools]"
-```
+本项目的原创代码和文档以 [MIT 许可证](LICENSE) 发布。
 
-安装后也可以不经 `run.bat` 直接启动：`python -m sgh_x458` 打开启动器，`python -m sgh_x458.x_fighter`、`python -m sgh_x458.spacewar`、`python -m sgh_x458.mypet` 直接进入游戏，参数见各游戏的 `--help`。`run.bat` 自己设置 `PYTHONPATH`，不安装也能运行。
+`firmware/` 中的三星 SGH-X458 固件，以及从中提取或翻译出的游戏图像、音频、文字和程序逻辑（包括 `src/sgh_x458/*/assets/` 和生成的 `game_flow.py`），版权归三星电子及原游戏开发者所有，不在 MIT 许可范围内。本项目仅用于技术研究和老游戏保存，与三星电子无关，也未获其授权。如果权利人认为本项目有不妥之处，请通过 Issue 联系，我们会及时处理。
 
-三款游戏用 Python 实现游戏逻辑，读取已提取的画面和数据表，并播放从固件 SMAF 重新渲染的音频。`firmware/` 保存刷机镜像，`tools/` 保存离线工具和追踪数据。
+## 致谢
 
-## 目录结构
-
-```text
-pyproject.toml            依赖、入口命令与打包配置
-run.bat                   双击启动器
-SGH-X458-Games.spec       PyInstaller 单文件构建
-src/sgh_x458/
-  launcher.py             Tk 启动器（python -m sgh_x458）
-  runtime/                三款游戏共用的固件调用、定时器、位图、整数运算、桌面适配和成绩编辑器
-  x_fighter/ spacewar/ mypet/
-    play.py               桌面入口（python -m sgh_x458.<game>）
-    game.py               Game 类：接入共用运行层和本游戏的规则覆盖
-    layout.py             资源路径、ROM 区间和 RAM 状态地址
-    game_flow.py          lift 生成的固件静态翻译，勿手改
-    assets/               runtime-data.bin、manifest.json、WAV 与原始 MMF
-tools/
-  firmware.py lift.py oracle.py assets.py render_audio.py   各游戏共用的离线工具
-  x_fighter/ spacewar/ mypet/                               提取、追踪、ARM 对照和追踪数据
-docs/                     各游戏的说明与逆向记录
-firmware/                 原始刷机镜像
-.local/                   本机存档、启动设置和按需生成的离线输出（不入库）
-```
-
-每款游戏从 `assets/runtime-data.bin` 读取画面和固件常量，从 `assets/audio/firmware_wav/` 播放音频。原始 MMF 保留供离线重渲染。《X-战机》额外有 `game_rules.py`（具名战斗规则）、`practice.py`（练习跳转）和 `audio_mix.py`（录音对照的音频适配）。
-
-- [X-战机](docs/x_fighter.md)
-- [空间大战](docs/spacewar.md)
-- [我的宠物](docs/mypet.md)
-
-## 固件与共用调度
-
-- 机型为三星 Anycall SGH-X458，游戏画面为 128×160，帧缓冲为 RGB565。
-- 固件为 `firmware/X458ZCEK1.s3`，大小 40,988,492 字节。SHA-256 为 `2e39ad4672c708498419aaca63843e500f6798f2d94171cd890b9ef86f1e9fad`。
-- 文件为 Motorola S-Record，含 1 条 S0、853,927 条 S3 和 1 条 S7。S3 的 32 位大端字段给出装载地址，从 `0x00000000` 开始。解析后的 ROM 上界为 `0xD63DD8`，未覆盖的字节填 `0xFF`。S7 值为 `0xA0020000`。
-- 用 [firmware.py](tools/firmware.py) 的 `load_rom()` 校验原始文件哈希、逐行长度和校验和，再按装载地址读取。本文的 ROM 地址指解析后的位置。多字节数据的端序以实际字段为准。注册表中的 Thumb 指针最低位为 1，记录和挂钩使用清掉最低位后的指令地址。区间均为左闭右开。
-- 离线对照器把 RAM 映射到 `0x01000000–0x01400000`。逆向时同时检查 ROM 中的初始化数据和 RAM 目标地址，尤其是指针表、资源选择表和跨场景存档字段。
-
-### 游戏注册表与服务地址
-
-从 ROM `0x5995B0` 开始，每条记录为 28 字节。前两个字段是内部名和短名指针，`+0x08` 是回调指针，`+0x10` 和 `+0x14` 是宽高。三条记录的 `+0x18` 都是 `0x4C`，对应 76 字节的记录；三款游戏均已按此长度接入桌面存档，《我的宠物》的记录里是宠物状态与时间戳，不是排行榜。
-
-| 索引 | 子包与固件名 | 注册记录 | Thumb 指针 | 回调地址 |
-|---|---|---|---|---|
-| 0 | `x_fighter` · `G58 AirShooting` | `0x5995B0` | `0x235A35` | `0x235A34` |
-| 1 | `spacewar` · `G94 SpaceWar` | `0x5995CC` | `0x2379DD` | `0x2379DC` |
-| 2 | `mypet` · `G133 MyPet` | `0x5995E8` | `0x238023` | `0x238022` |
-
-共用调度器的调用层和各游戏回调的事件编号是两层接口。用离线对照器初始化显示后，可以调用 `game.call(0x20D7AD, 0, 10 * language + game_index)` 打开相应菜单。简体中文用 `language=1`，三款游戏依次传 10、11、12。`Session.open_menu()` 读取游戏类的 `game_index`。已观察到游戏回调的事件 0 绘制菜单标志、1 开始游戏、4 定时更新、5 处理游戏内按键、9 绘制帮助，具体参数和其余事件按游戏核实。《我的宠物》打开菜单时还先收到事件 11。
-
-| 固件地址 | 用途 |
-|---|---|
-| `0x20D1F6` | 游戏显示初始化和前后缓冲 |
-| `0x20D7AC` | 共用调度器。外部事件 0 打开菜单，1 定时回调，2 按键，3 退出 |
-| `0x22B100`、`0x22B174` | 位图绘制和可镜像的位图绘制 |
-| `0x22808E` | 提交 RGB565 帧 |
-| `0x228174`、`0x2281F0` | 注册和停止游戏定时器。注册按 `(毫秒 * 13 + 59) // 60` 换算为刻度 |
-| `0x2280D8`、`0x228134`、`0x22813E`、`0x228148` | 播放、停止、暂停和恢复音频 |
-| `0x228224`、`0x2282C4` | 存档读取和写入服务 |
-
-### 共用成绩录入
-
-- 两款游戏共用的成绩录入在光标右移时会拼接 ROM `0x22BB54` 的空格字符串。`tools/x_fighter/lift.py` 与 `tools/spacewar/extract.py` 都显式打包了 `0x22BB50–0x22BB60`，重做离线提取时不可省略。
-- 成绩录入是共用调度器的 UI：光标 `0x0103EFDC`、名字缓冲指针 `0x0103EFE8`、上限 10 字符、绘制入口 `0x22B5C6`。桌面版用 Python 的 `type_score_character()` 直接写 ASCII 并调用绘制例程刷新 RGB565 帧，绕过手机九宫格多击；`src/sgh_x458/runtime/score_editor.py` 提供两款游戏共用的实现，`runtime/keys.py` 处理桌面键盘映射。
-
-## 复刻方法
-
-1. 用注册表和共用调度器进入目标游戏，以已知的菜单、帮助和开场作为第一批可重复的探针。记录回调事件、定时器、绘图参数、音频地址与长度、RAM 读写和存档调用。每款游戏分别使用独立的探针存档。
-2. 沿绘图和音频调用追溯资源指针与调色板，确认连续记录的起止和格式后再批量导出。用 ROM 地址、长度和哈希记录来源。画面与固件提交的 RGB565 帧对照。SMAF 原样保存，再离线渲染 WAV。真机录音用于比较音色和时序。
-3. 从开场进入实际玩法，定位状态分发表、更新节拍和初始化数据。《我的宠物》已按此路径完成：追踪输入动作、状态变化、定时更新以及退出重进时的存档恢复，每条规则以 ROM 代码、追踪或实机测量确认后写入 Python。
-4. 先验证正常操作路径，再验证边界和跨场景保存。对照时分别记录状态、帧缓冲、音频事件和存档字节。把桌面输入、显示与启动选项放在适配层，并注明与真机测量的边界。
-
-## 固件对照验证
-
-安装 `[tools]` 依赖后，在项目根目录运行以下命令。各游戏说明还列出了资源提取方法、对照范围和待实测项。
-
-```powershell
-.\.venv\Scripts\python.exe -B -m tools.x_fighter.verify_source --compare-rom --all-stages
-.\.venv\Scripts\python.exe -B -m tools.spacewar.verify
-.\.venv\Scripts\python.exe -B -m tools.mypet.verify
-```
+- [Unicorn Engine](https://www.unicorn-engine.org/)：运行原版 ARM 代码做对照。
+- [pygame-ce](https://pyga.me/)：显示与音频。
+- [libsmaf](https://github.com/denjhang/libsmaf) 收录的 Yamaha MA-3 渲染器：离线把 SMAF 渲染成 WAV。
+- [PyInstaller](https://pyinstaller.org/)：打包单文件 EXE。
