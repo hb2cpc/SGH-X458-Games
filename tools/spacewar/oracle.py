@@ -1,7 +1,7 @@
 """Offline reference execution for G94 SpaceWar."""
 
-from SpaceWar.layout import GAME_ENTRY, INITIAL_DATA, MANIFEST, STATE_BASE
-from tools.x_fighter.runtime import FirmwareGame
+from sgh_x458.spacewar.layout import GAME_ENTRY, INITIAL_DATA, MANIFEST, STATE_BASE
+from tools.oracle import FirmwareGame
 
 
 class Oracle(FirmwareGame):

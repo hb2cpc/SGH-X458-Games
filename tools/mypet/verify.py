@@ -14,10 +14,10 @@ from unittest.mock import patch
 
 from unicorn import UC_HOOK_CODE
 
-from handset import session
-from MyPet.layout import ASSETS, MANIFEST, SAVE_BUFFER
-from MyPet.mypet import Game, READ_CLOCK
-from tools.x_fighter.firmware import ROM_SHA256, load_rom
+from sgh_x458.runtime import session
+from sgh_x458.mypet.layout import ASSETS, MANIFEST, SAVE_BUFFER
+from sgh_x458.mypet.game import Game, READ_CLOCK
+from tools.firmware import ROM_SHA256, load_rom
 
 from .oracle import Oracle
 

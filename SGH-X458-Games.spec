@@ -3,20 +3,22 @@ from lzma import FILTER_DELTA, FILTER_LZMA2, PRESET_EXTREME, compress
 from pathlib import Path
 
 root = Path(SPECPATH).resolve()
-games = ("X-Fighter", "SpaceWar", "MyPet")
+src = root / "src"
+games = ("x_fighter", "spacewar", "mypet")
 packed_dir = root / ".local" / "package-assets"
 datas = []
 for game in games:
-    assets = Path(game) / "assets"
+    # Bundle paths mirror the package so layout.ASSETS resolves inside the EXE.
+    assets = Path("sgh_x458") / game / "assets"
     for name in ("manifest.json", "runtime-data.bin"):
-        datas.append((str(root / assets / name), assets.as_posix()))
+        datas.append((str(src / assets / name), assets.as_posix()))
     audio = assets / "audio"
-    if game == "X-Fighter":
-        datas.append((str(root / audio / "playback.json"), audio.as_posix()))
+    if game == "x_fighter":
+        datas.append((str(src / audio / "playback.json"), audio.as_posix()))
     wav_dir = audio / "firmware_wav"
     packed_wav_dir = packed_dir / wav_dir
     packed_wav_dir.mkdir(parents=True, exist_ok=True)
-    for wav in sorted((root / wav_dir).glob("*.wav")):
+    for wav in sorted((src / wav_dir).glob("*.wav")):
         pcm_file = wav.read_bytes()
         lzma2 = {"id": FILTER_LZMA2, "preset": 9 | PRESET_EXTREME, "dict_size": 4 * 1024 * 1024}
         packed = packed_wav_dir / f"{wav.name}.xz"
@@ -28,10 +30,10 @@ for game in games:
         datas.append((str(packed), wav_dir.as_posix()))
 
 a = Analysis(
-    [str(root / "launcher.py")],
-    pathex=[str(root)],
+    [str(src / "sgh_x458" / "__main__.py")],
+    pathex=[str(src)],
     datas=datas,
-    hiddenimports=[f"{game}.play" for game in games],
+    hiddenimports=[f"sgh_x458.{game}.play" for game in games],
     excludes=["_hashlib", "statistics", "pygame._freetype", "pygame.font", "pygame.imageext", "pygame.pypm"],
     optimize=1,
 )

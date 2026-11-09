@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sgh-x458-games"
+version = "1.0.0"
+description = "Desktop ports of the three Anycall SGH-X458 firmware games"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["pygame-ce==2.5.8"]
+
+[project.optional-dependencies]
+# Offline firmware tracing and ARM comparison (python -m tools.<game>.verify).
+tools = ["unicorn==2.1.4"]
+# Windows single-file build (see SGH-X458-Games.spec).
+build = ["pyinstaller==6.22.3"]
+
+[project.gui-scripts]
+sgh-x458 = "sgh_x458.launcher:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"sgh_x458.x_fighter" = ["assets/**/*"]
+"sgh_x458.spacewar" = ["assets/**/*"]
+"sgh_x458.mypet" = ["assets/**/*"]

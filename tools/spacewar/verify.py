@@ -5,10 +5,10 @@ import wave
 from hashlib import sha256
 from struct import pack
 
-from handset.score_editor import SCORE_ENTRY, SCORE_NAME_BUFFER, SCORE_NAME_CURSOR, SCORE_NAME_LIMIT
-from SpaceWar.layout import ASSETS, DEFAULT_LIVES, MANIFEST, MAX_LIVES, STAGES, STATE_BASE
-from SpaceWar.spacewar import DRAW_TEXT, ITEM_TIMERS, ITEM_TICKS, LIVES, STAGE, Game
-from tools.x_fighter.firmware import ROM_SHA256, load_rom
+from sgh_x458.runtime.score_editor import SCORE_ENTRY, SCORE_NAME_BUFFER, SCORE_NAME_CURSOR, SCORE_NAME_LIMIT
+from sgh_x458.spacewar.layout import ASSETS, DEFAULT_LIVES, MANIFEST, MAX_LIVES, STAGES, STATE_BASE
+from sgh_x458.spacewar.game import DRAW_TEXT, ITEM_TIMERS, ITEM_TICKS, LIVES, STAGE, Game
+from tools.firmware import ROM_SHA256, load_rom
 
 from .oracle import Oracle
 
@@ -291,7 +291,7 @@ def region_fill_budget():
 
 
 def desktop_score_entry():
-    from SpaceWar.play import pygame, score_entry_key
+    from sgh_x458.spacewar.play import pygame, score_entry_key
 
     def editor():
         game = Game()

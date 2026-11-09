@@ -1,7 +1,7 @@
 """Offline reference execution for G133 MyPet."""
 
-from MyPet.layout import GAME_ENTRY, MANIFEST, STATE_BASE
-from tools.x_fighter.runtime import FirmwareGame
+from sgh_x458.mypet.layout import GAME_ENTRY, MANIFEST, STATE_BASE
+from tools.oracle import FirmwareGame
 
 
 class Oracle(FirmwareGame):

@@ -4,26 +4,18 @@ import argparse
 import json
 from pathlib import Path
 
-from SpaceWar.layout import ASSETS, GAME_ENTRY, INITIAL_DATA, MANIFEST, ROOT
-from handset.word_ops import MATH_RULES
-from tools.x_fighter.extract_assets import export_game_banks
-from tools.x_fighter.firmware import ROM_SHA256, image_record, load_rom
-from tools.x_fighter.lift import HAND_WRITTEN, Lowering as ThumbLowering
-
-
-IMAGE_START, AUDIO_START, AUDIO_END = 0x5ADDD8, 0x6123E5, 0x61A8E3
-DATA_END = 0x61ABB8
+from sgh_x458.spacewar.layout import (
+    ASSETS, AUDIO_END, AUDIO_START, DATA_END, GAME_ENTRY, IMAGE_START, INITIAL_DATA, MANIFEST, ROOT,
+)
+from sgh_x458.runtime.word_ops import MATH_RULES
+from tools.assets import export_game_banks
+from tools.firmware import ROM_SHA256, image_record, load_rom
+from tools.lift import HAND_WRITTEN, Lowering as ThumbLowering
 
 
 class Lowering(ThumbLowering):
-    hand_written = {
-        address for address in HAND_WRITTEN if not 0x22FE50 <= address < 0x235BFC
-    } | MATH_RULES.keys()
-
-    def __init__(self, rom, trace):
-        super().__init__(rom, trace)
-        self.entries = {0x20D1F6, 0x20D7AC, GAME_ENTRY & ~1}
-        self.entries.update(address for address, _, thumb in trace["blocks"] if thumb)
+    game_entry = GAME_ENTRY
+    hand_written = HAND_WRITTEN | MATH_RULES.keys()
 
     def in_code(self, address):
         return (0x235BFC <= address < 0x237E40 or address == 0x235928

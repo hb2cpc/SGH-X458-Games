@@ -1,6 +1,7 @@
 * text=auto
+*.bat text eol=crlf
 
 # Keep the verified firmware bytes and the generator's output line endings.
 /firmware/*.s3 binary
-/*/game_flow.py text eol=lf
-/*/assets/manifest.json -text
+/src/sgh_x458/*/game_flow.py text eol=lf
+/src/sgh_x458/*/assets/manifest.json -text

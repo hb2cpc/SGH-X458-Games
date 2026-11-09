@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 
-from tools.x_fighter.firmware import load_rom
+from tools.firmware import load_rom
 
 from .probe import Probe, png
 

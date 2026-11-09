@@ -6,21 +6,14 @@ import wave
 from collections import deque
 from contextlib import closing
 from hashlib import sha256
-from importlib import import_module
 from struct import pack, unpack
 
-from handset.session import AudioRequest
-from tools import X_FIGHTER_DIR as ROOT
-
-
-rules = import_module("X-Fighter.game_rules")
-PICKUP_STEPS, PICKUP_STEP_COUNT = rules.PICKUP_STEPS, rules.PICKUP_STEP_COUNT
-PICKUPS, PLAYER = rules.PICKUPS, rules.PLAYER
-STATE = import_module("X-Fighter.layout").STATE
-practice = import_module("X-Fighter.practice")
-start_scene = practice.start_scene
-port = import_module("X-Fighter.x_fighter")
-Game, HANDSET_LASER_DEATH_MS = port.Game, port.HANDSET_LASER_DEATH_MS
+from sgh_x458.runtime.session import AudioRequest
+from sgh_x458.x_fighter import practice
+from sgh_x458.x_fighter.game import HANDSET_LASER_DEATH_MS, Game
+from sgh_x458.x_fighter.game_rules import PICKUP_STEP_COUNT, PICKUP_STEPS, PICKUPS, PLAYER
+from sgh_x458.x_fighter.layout import ASSETS, STATE
+from sgh_x458.x_fighter.practice import start_scene
 
 
 def compare(actual, reference):
@@ -57,7 +50,7 @@ def begin(game, aircraft):
 
 
 def audio_profile():
-    audio = ROOT / "assets/audio"
+    audio = ASSETS / "audio"
     profile = json.loads((audio / "playback.json").read_text(encoding="utf-8"))["clips"]
     assert len(profile) == 15
     for address, entry in profile.items():
@@ -300,8 +293,9 @@ def main():
     args = parser.parse_args()
     factory = None
     if args.compare_rom:
-        from .firmware import load_rom
-        from .runtime import Game as Reference
+        from tools.firmware import load_rom
+
+        from .oracle import Oracle as Reference
         rom = load_rom()
 
         def factory(language):

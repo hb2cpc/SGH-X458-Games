@@ -5,26 +5,23 @@ import json
 import wave
 from contextlib import closing
 from hashlib import sha256
-from importlib import import_module
 from struct import pack, unpack
 
 from unicorn import UC_HOOK_CODE
 from unicorn.arm_const import UC_ARM_REG_R3
 
-from handset.session import FRAME_BYTES, HEIGHT, WIDTH
-from tools import X_FIGHTER_DIR as ROOT
+from sgh_x458.runtime.session import FRAME_BYTES, HEIGHT, WIDTH
+from sgh_x458.x_fighter.game import Game as SourceGame
+from sgh_x458.x_fighter.layout import ASSETS, AUDIO_START, IMAGE_START, STATE
+from tools.assets import png, rgba_palette
+from tools.firmware import image_record, load_rom, palette
 
-from .extract_assets import SHARED_IMAGES, png, rgba_palette
-from .firmware import AUDIO_START, IMAGE_START, image_record, load_rom, palette
-from .runtime import Game
-
-
-STATE = import_module("X-Fighter.layout").STATE
-SourceGame = import_module("X-Fighter.x_fighter").Game
+from .extract_assets import SHARED_IMAGES
+from .oracle import Oracle as Game
 
 
 def check_assets(rom):
-    root = ROOT / "assets"
+    root = ASSETS
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     graphics = manifest["images"] + manifest["shared_images"]
     assert len(manifest["images"]) == 182

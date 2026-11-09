@@ -14,12 +14,12 @@ from struct import pack
 from unicorn import UC_HOOK_BLOCK, UC_HOOK_CODE, UC_HOOK_MEM_READ
 from unicorn.arm_const import UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2
 
-from handset.bitmap_draw import rgb565
-from handset.session import HEIGHT, WIDTH
-from MyPet.layout import CALLBACK
+from sgh_x458.runtime.bitmap_draw import rgb565
+from sgh_x458.runtime.session import HEIGHT, WIDTH
+from sgh_x458.mypet.layout import CALLBACK
 from tools import PROJECT_ROOT
-from tools.x_fighter.extract_assets import chunk
-from tools.x_fighter.firmware import load_rom
+from tools.assets import chunk
+from tools.firmware import load_rom
 
 from .oracle import Oracle
 

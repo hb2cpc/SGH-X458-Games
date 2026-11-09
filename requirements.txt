@@ -1,5 +1,0 @@
-# Desktop games
-pygame-ce==2.5.8
-
-# Offline firmware verification and tracing
-unicorn==2.1.4
