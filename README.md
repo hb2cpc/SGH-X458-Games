@@ -24,16 +24,50 @@
 
 ## 部署与运行
 
-需要 Windows 和 Python 3.12。在项目根目录运行：
+需要 Windows 10/11 和 [Python 3.12](https://www.python.org/downloads/)。以下命令在 PowerShell 中运行。
+
+**1. 获取代码**
+
+```powershell
+git clone https://github.com/hb2cpc/SGH-X458-Games.git
+cd SGH-X458-Games
+```
+
+**2. 创建虚拟环境**
 
 ```powershell
 python -m venv .venv
+```
+
+**3. 安装依赖**
+
+依赖写在 `pyproject.toml` 里（作用相当于 `requirements.txt`），运行游戏只需要 `pygame-ce`：
+
+```powershell
 .\.venv\Scripts\python.exe -m pip install -e .
 ```
 
-然后双击 `run.bat` 打开启动器。也可以用 `python -m sgh_x458.x_fighter`（或 `spacewar`、`mypet`）直接进入游戏，加 `--help` 查看参数。
+**4. 运行**
+
+双击 `run.bat` 打开启动器，或在命令行运行：
+
+```powershell
+.\.venv\Scripts\python.exe -m sgh_x458             # 启动器
+.\.venv\Scripts\python.exe -m sgh_x458.x_fighter   # 直接进入 X-战机（另有 spacewar、mypet），加 --help 查看参数
+```
 
 存档和设置保存在项目根目录的 `.local/` 下。
+
+**5. 打包成单文件 EXE（可选）**
+
+需要先安装 [ffmpeg](https://ffmpeg.org/)（用于把音频压缩成 OGG）并加入 PATH：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[build]"
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --workpath .local\package-build SGH-X458-Games.spec
+```
+
+生成的 `dist\SGH-X458-Games.exe` 约 11 MB，复制到没有 Python 的 Windows 10/11 电脑上双击即可运行，存档写在 `%LOCALAPPDATA%\SGH-X458-Games`。
 
 ## 逆向流程
 
