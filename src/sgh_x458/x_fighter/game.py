@@ -37,6 +37,7 @@ class Game(ScoreEditor, TranslatedGame):
         self.invincible = False
         self.auto_fire = True
         self.primary_fire_requested = False
+        self.equipment = None
         self.rules.update({
             0x22FE50: lambda: activate_nuclear_attack(self),
             0x22FF54: lambda: collect_power_up(self, self.r[0]),
@@ -78,6 +79,15 @@ class Game(ScoreEditor, TranslatedGame):
     def configure_practice(self, *, invincible, auto_fire, upgraded, shield, bombs):
         self.invincible = invincible
         self.auto_fire = auto_fire
+        self.prepare_equipment(upgraded, shield, bombs)
+
+    def prepare_equipment(self, upgraded=False, shield=None, bombs=None):
+        """Grant starting equipment now in battle, or when the first battle begins.
+
+        self.equipment holds the arguments while they still wait for that battle.
+        """
+        self.rules.pop(ENTER_BATTLE, None)
+        self.equipment = None
         if not (upgraded or shield or bombs is not None):
             return
 
@@ -93,12 +103,14 @@ class Game(ScoreEditor, TranslatedGame):
 
         def first_battle():
             self.rules.pop(ENTER_BATTLE)
+            self.equipment = None
             equip()
             return BLOCKS[ENTER_BATTLE](self, self.r, self.load_value, self.store_value)
 
         if self.state == 4:
             equip()
         else:
+            self.equipment = [upgraded, shield, bombs]
             self.rules[ENTER_BATTLE] = first_battle
 
     def finish_explosion(self):

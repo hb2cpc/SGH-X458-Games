@@ -6,8 +6,8 @@ from functools import partial
 import pygame
 
 from sgh_x458.runtime.desktop import (
-    DEFAULT_SPEED, WINDOW_SIZES, KeyControls, add_play_options, data_directory, firmware_sound,
-    load_record, open_game_display, run_game_loop,
+    DEFAULT_SPEED, WINDOW_SIZES, KeyControls, ScoreFile, add_play_options, data_directory, firmware_sound,
+    open_game_display, run_game_loop,
 )
 from sgh_x458.runtime.keys import DIGITS, DIRECTIONS, WASD, score_entry_key as handset_score_entry_key
 from sgh_x458.runtime.resume import ResumeSlot
@@ -58,21 +58,15 @@ def handle_key(key, game):
 def run(args):
     customized = (args.scene != "menu" or args.stage != 1 or args.lives != DEFAULT_LIVES
                   or args.start_item != "none" or args.speed != DEFAULT_SPEED or args.invincible)
-    save_path = PRACTICE_SAVE if customized else SAVE_PATH
-    slot = None
-    if args.scene == "menu":
-        slot = ResumeSlot(save_path.with_name("practice-resume.bin" if customized else "resume.bin"),
-                          (args.language, args.scene, args.stage, args.lives, args.start_item,
-                           args.speed, args.invincible))
-    scores = load_record(save_path, "SpaceWar score")
-    saved = bytes(scores)
+    scores = ScoreFile(SAVE_PATH, "SpaceWar score", PRACTICE_SAVE, practice=customized)
+    slot = ResumeSlot(SAVE_PATH.parent, args.language, scores) if args.scene == "menu" else None
     try:
         screen = open_game_display(WINDOW_SIZES[args.size])
         pygame.display.set_caption("空间大战")
         sound = firmware_sound(ASSETS, args)
         jump_to_stage = args.scene == "stage"
         game = Game(on_audio=None if jump_to_stage else sound.play,
-                    save=scores, language=args.language)
+                    save=scores.record, language=args.language)
         game.configure_campaign(args.stage, args.lives, args.start_item, invincible=args.invincible)
         game.boot()
 
@@ -83,20 +77,21 @@ def run(args):
             game.on_audio = sound.play
 
         def desktop_key(key, game):
-            if game.ui_state == 0 and slot is not None and slot.available:
-                code = phone_key(key, game)
-                if code == 4:
+            code = phone_key(key, game) if game.ui_state == 0 and slot is not None else None
+            if code == 4:
+                if slot.available:
                     slot.resume(game, sound)
-                    return None
-                if code == 1:
-                    result = handle_key(key, game)
-                    if game.ui_state == 1:
-                        slot.discard()
-                    return result
-            return handle_key(key, game)
+                return None
+            result = handle_key(key, game)
+            if code == 1 and game.ui_state == 1:
+                slot.start_new_game(game)
+            return result
+
+        def can_continue():
+            return slot is not None and slot.available
 
         on_close = partial(slot.suspend, game, sound) if slot is not None else None
-        run_game_loop(game, screen, args.speed, KeyControls(desktop_key), save_path, saved,
+        run_game_loop(game, screen, args.speed, KeyControls(desktop_key, can_continue), scores,
                       on_close=on_close, resume_slot=slot)
     finally:
         pygame.quit()

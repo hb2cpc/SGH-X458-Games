@@ -8,7 +8,7 @@ from functools import partial
 import pygame
 
 from sgh_x458.runtime.desktop import (
-    DEFAULT_SPEED, WINDOW_SIZES, KeyControls, Sound, add_play_options, data_directory, load_record,
+    DEFAULT_SPEED, WINDOW_SIZES, KeyControls, ScoreFile, Sound, add_play_options, data_directory,
     open_game_display, run_game_loop, style_start_menu,
 )
 from sgh_x458.runtime.keys import DIGITS, WASD, score_entry_key
@@ -16,7 +16,7 @@ from sgh_x458.runtime.resume import ResumeSlot
 from sgh_x458.runtime.score_editor import SCORE_ENTRY
 
 from .audio_mix import load_game_clip
-from .game import ENTER_BATTLE, Game
+from .game import Game
 from .layout import ASSETS, DEFAULT_BOMBS, MAX_BOMBS
 from .practice import SCENES, start_scene
 
@@ -25,6 +25,14 @@ SAVE_PATH = data_directory() / "X-Fighter" / "scores.bin"
 PRACTICE_SAVE = SAVE_PATH.with_name("practice-scores.bin")
 AUDIO_PATH = ASSETS / "audio"
 REPEATABLE = {1, 4, 5, 6, 7}
+
+
+def saved_equipment(metadata):
+    """Starting equipment the saved game had not received yet."""
+    if "equipment" in metadata:
+        return metadata["equipment"] or ()
+    # Earlier slots kept the launch options in the profile: upgraded, shield, bombs.
+    return metadata["profile"][5:8] if metadata.get("pending_equipment") else ()
 
 
 def phone_key(key, game):
@@ -53,9 +61,10 @@ class BattleControls(KeyControls):
     collected here and handed to Game.advance() instead of being sent immediately.
     """
 
-    def __init__(self, slot, sound):
+    def __init__(self, slot, sound, equipment):
         self.slot = slot
         self.sound = sound
+        self.equipment = equipment
         self.held = {}
         self.pending_actions = deque()
         self.fire_held = False
@@ -89,20 +98,21 @@ class BattleControls(KeyControls):
         slot = self.slot
         can_continue = slot is not None and slot.available
         if game.ui_state == 0 and code == 4:
-            if can_continue and not slot.resume(game, self.sound):
-                game.rules.pop(ENTER_BATTLE, None)
+            if can_continue:
+                game.prepare_equipment(*saved_equipment(slot.resume(game, self.sound)))
             return False
         if code is None:
             return False
-        starting = game.ui_state == 0 and code == 1 and can_continue
+        starting = game.ui_state == 0 and code == 1
         closing = False
         if in_battle and code in (6, 9):
             if code not in self.pending_actions:
                 self.pending_actions.append(code)
         elif game.key(code) == 1:
             closing = True
-        if starting and game.ui_state == 1:
-            slot.discard()
+        if starting and game.ui_state == 1 and slot is not None:
+            slot.start_new_game(game)
+            game.prepare_equipment(*self.equipment)
         if code == 23:
             self.pending_actions.clear()
             self.stop_firing(game)
@@ -128,16 +138,11 @@ def run(args):
     bombs = args.bombs if args.scene != "menu" or args.bombs != DEFAULT_BOMBS else None
     practice = (args.scene != "menu" or args.invincible or args.manual_fire
                 or args.upgraded or args.shield or bombs is not None or args.speed != DEFAULT_SPEED)
-    save_path = PRACTICE_SAVE if practice else SAVE_PATH
-    slot = None
-    if args.scene == "menu":
-        slot = ResumeSlot(save_path.with_name("practice-resume.bin" if practice else "resume.bin"),
-                          (args.language, args.scene, args.speed, args.invincible,
-                           args.manual_fire, args.upgraded, args.shield, bombs))
-    scores = load_record(save_path, "X-Fighter score")
-    saved = bytes(scores)
+    scores = ScoreFile(SAVE_PATH, "X-Fighter score", PRACTICE_SAVE, practice=practice)
+    slot = ResumeSlot(SAVE_PATH.parent, args.language, scores) if args.scene == "menu" else None
+    equipment = (args.upgraded, args.shield, bombs)
     startup_audio = []
-    game = Game(language=args.language, on_audio=startup_audio.append, save=scores, handset_timing=True)
+    game = Game(language=args.language, on_audio=startup_audio.append, save=scores.record, handset_timing=True)
 
     try:
         start_scene(game, args.scene, args.stage, args.aircraft, args.progress)
@@ -153,9 +158,9 @@ def run(args):
 
         def suspend():
             if slot is not None:
-                slot.suspend(game, sound, pending_equipment=ENTER_BATTLE in game.rules)
+                slot.suspend(game, sound, equipment=game.equipment)
 
-        run_game_loop(game, screen, args.speed, BattleControls(slot, sound), save_path, saved,
+        run_game_loop(game, screen, args.speed, BattleControls(slot, sound, equipment), scores,
                       on_close=suspend, resume_slot=slot)
     finally:
         game.close()

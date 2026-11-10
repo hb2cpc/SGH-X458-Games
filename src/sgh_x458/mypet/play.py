@@ -5,7 +5,8 @@ import argparse
 import pygame
 
 from sgh_x458.runtime.desktop import (
-    WINDOW_SIZES, KeyControls, add_play_options, data_directory, firmware_sound, load_record, open_game_display, run_game_loop,
+    WINDOW_SIZES, KeyControls, ScoreFile, add_play_options, data_directory, firmware_sound, open_game_display,
+    run_game_loop,
 )
 from sgh_x458.runtime.keys import DIGITS, DIRECTIONS, WASD
 from sgh_x458.runtime.session import GAME_CONTROLLER, TIMER_ARGUMENT
@@ -35,17 +36,16 @@ def handle_key(key, game):
 
 
 def run(args):
-    save = load_record(SAVE_PATH, "MyPet save")
-    saved = bytes(save)
+    save = ScoreFile(SAVE_PATH, "MyPet save")
     try:
         sound = firmware_sound(ASSETS, args)
-        game = Game(on_audio=sound.play, save=save, language=args.language)
+        game = Game(on_audio=sound.play, save=save.record, language=args.language)
         game.boot()
         # The firmware starts with a blank logo frame. Draw its first animation frame before showing the window.
         game.call(GAME_CONTROLLER, 1, TIMER_ARGUMENT[0])
         screen = open_game_display(WINDOW_SIZES[args.size])
         pygame.display.set_caption("我的宠物")
-        run_game_loop(game, screen, args.speed, KeyControls(handle_key), SAVE_PATH, saved,
+        run_game_loop(game, screen, args.speed, KeyControls(handle_key), save,
                       on_close=game.save_on_close)
     finally:
         pygame.quit()

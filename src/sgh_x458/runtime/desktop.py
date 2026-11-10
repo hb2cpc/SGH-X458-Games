@@ -19,7 +19,8 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 
 WINDOW_SIZES = {"128x160": (128, 160), "200x250": (200, 250),
-                "300x375": (300, 375), "400x500": (400, 500)}
+                "300x375": (300, 375), "400x500": (400, 500),
+                "500x625": (500, 625)}
 DEFAULT_SIZE = "400x500"
 DEFAULT_VOLUME = 50
 DEFAULT_SPEED = "1"
@@ -206,6 +207,36 @@ def write_record(path, record):
         temp.unlink(missing_ok=True)
 
 
+class ScoreFile:
+    """The save record on disk, with a separate practice file for runs that used launcher features."""
+
+    def __init__(self, path, label, practice_path=None, *, practice=False):
+        self.paths = {False: path, True: practice_path or path}
+        self.label = label
+        self.practice = practice
+        self.record = load_record(self.path, label)
+        self.saved = bytes(self.record)
+
+    @property
+    def path(self):
+        return self.paths[self.practice]
+
+    def sync(self, game):
+        if game.save != self.saved:
+            write_record(self.path, game.save)
+            self.saved = bytes(game.save)
+
+    def use(self, game, practice):
+        """Point the running game at the normal or practice file. Returns True when it changed."""
+        if practice == self.practice:
+            return False
+        self.sync(game)
+        self.practice = practice
+        game.save[:] = load_record(self.path, self.label)
+        self.saved = bytes(game.save)
+        return True
+
+
 def firmware_sound(assets, args):
     sound = Sound(lambda request: assets / "audio/firmware_wav" / f"{request.address:06X}.wav",
                   enabled=not args.mute and args.volume > 0)
@@ -222,8 +253,9 @@ def frame_time(clock, speed_quarters, remainder):
 class KeyControls:
     """Default input: pass each key press to handle_key(key, game). Subclass for richer input."""
 
-    def __init__(self, handle_key):
+    def __init__(self, handle_key, can_continue=None):
         self.handle_key = handle_key
+        self.can_continue = can_continue
 
     def handle_event(self, event, game):
         """Handle one pygame event; return True to close the game."""
@@ -235,10 +267,11 @@ class KeyControls:
         game.advance(elapsed)
 
     def style_menu(self, frame):
-        return style_start_menu(frame)
+        disable = self.can_continue is not None and not self.can_continue()
+        return style_start_menu(frame, disable_continue=disable)
 
 
-def run_game_loop(game, screen, speed, controls, save_path, saved, *, on_close, resume_slot=None):
+def run_game_loop(game, screen, speed, controls, scores, *, on_close, resume_slot=None):
     import pygame
 
     clock = pygame.time.Clock()
@@ -266,8 +299,6 @@ def run_game_loop(game, screen, speed, controls, save_path, saved, *, on_close, 
                 pixels = controls.style_menu(game.frame) if game.ui_state == 0 else game.frame
                 draw_frame(screen, pixels)
                 displayed = game.frame_number
-        if game.save != saved:
-            write_record(save_path, game.save)
-            saved = bytes(game.save)
+        scores.sync(game)
         if resume_slot is not None:
             resume_slot.update(game)

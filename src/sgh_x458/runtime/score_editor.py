@@ -5,6 +5,8 @@ SCORE_NAME_CURSOR = 0x0103EFDC
 SCORE_NAME_BUFFER = 0x0103EFE8
 SCORE_NAME_LIMIT = 10
 DRAW_SCOREBOARD = 0x22B5C6
+# Reads the save record into the leaderboard at 0x12DA54C, filling defaults when it is blank.
+LOAD_SCORES = 0x22B3C4
 
 
 class ScoreEditor:
