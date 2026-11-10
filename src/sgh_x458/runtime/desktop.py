@@ -5,11 +5,13 @@ import os
 import sys
 from array import array
 from functools import lru_cache
+from io import BytesIO
 from pathlib import Path
 from struct import Struct
 from tempfile import NamedTemporaryFile
 from threading import get_native_id
 
+from . import read_asset
 from .bitmap_draw import rgb565
 from .session import HEIGHT, SAVE_SIZE, WIDTH
 
@@ -150,15 +152,13 @@ class Sound:
 
 
 def load_sound_clip(path):
+    """Load a firmware WAV. The single-file build ships the same sound as OGG Vorbis instead."""
     import pygame
 
-    if getattr(sys, "frozen", False):
-        from io import BytesIO
-        from lzma import decompress
-
-        packed = path.with_suffix(path.suffix + ".xz").read_bytes()
-        return pygame.mixer.Sound(file=BytesIO(decompress(packed)))
-    return pygame.mixer.Sound(path)
+    compressed = path.with_suffix(".ogg")
+    if getattr(sys, "frozen", False) and compressed.is_file():
+        return pygame.mixer.Sound(file=BytesIO(compressed.read_bytes()))
+    return pygame.mixer.Sound(file=BytesIO(read_asset(path)))
 
 
 def percent(text):

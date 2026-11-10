@@ -3,6 +3,7 @@
 from functools import partial
 from struct import Struct, unpack_from
 
+from . import read_asset
 from .bitmap_draw import BitmapDraw
 from .session import Session
 from .word_ops import MASK, MATH_RULES, signed
@@ -50,7 +51,7 @@ class TranslatedGame(Session):
             self.rules.update({address: partial(rule, self) for address, rule in MATH_RULES.items()})
 
     def load_static(self):
-        data = self.data_path.read_bytes()
+        data = read_asset(self.data_path)
         cursor = 4
         for _ in range(unpack_from("<I", data)[0]):
             address, size = unpack_from("<II", data, cursor)
