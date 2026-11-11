@@ -44,16 +44,28 @@ DISABLED_KEY_COLORS = {
     0x0200: 0x8410, 0x8710: 0x9CF3, 0xC7F8: 0xC618,
     0xFF9F: 0xCE59, 0xFFFF: 0xDEFB,
 }
+# SpaceWar's firmware always draws "4 Continue" greyed: on the phone it only resumed
+# a game paused in memory. These restore the normal tile and label colours.
+FIRMWARE_GREY_KEY_COLORS = {0xC698: 0x0200, 0xE7DC: 0x8710, 0xF7FE: 0xC7F8}
+FIRMWARE_GREY_LABEL = 0xC618
 
 
-def style_start_menu(frame, *, disable_continue=False):
-    """Apply the shared number-tile palette to a desktop title frame."""
+def style_start_menu(frame, *, disable_continue=False, enable_continue=False):
+    """Apply the shared number-tile palette to a desktop title frame.
+
+    disable_continue greys "4 Continue"; enable_continue shows it as available even
+    where the firmware drew it greyed. With neither, the firmware's own look is kept.
+    """
     result = bytearray(frame)
     for top in (75, 141):
         for y in range(top, top + 19):
             for x in range(WIDTH):
                 offset = (y * WIDTH + x) * PIXEL.size
                 color = PIXEL.unpack_from(frame, offset)[0]
+                if enable_continue and top == 141 and x < 12:
+                    color = FIRMWARE_GREY_KEY_COLORS.get(color, color)
+                elif enable_continue and top == 141 and 12 <= x < 63 and color == FIRMWARE_GREY_LABEL:
+                    color = 0
                 if disable_continue and top == 141 and x < 12:
                     styled = DISABLED_KEY_COLORS.get(color, color)
                 elif disable_continue and top == 141 and 12 <= x < 63 and color == 0:
@@ -267,8 +279,10 @@ class KeyControls:
         game.advance(elapsed)
 
     def style_menu(self, frame):
-        disable = self.can_continue is not None and not self.can_continue()
-        return style_start_menu(frame, disable_continue=disable)
+        if self.can_continue is None:
+            return style_start_menu(frame)
+        available = self.can_continue()
+        return style_start_menu(frame, disable_continue=not available, enable_continue=available)
 
 
 def run_game_loop(game, screen, speed, controls, scores, *, on_close, resume_slot=None):
