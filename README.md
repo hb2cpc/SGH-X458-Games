@@ -1,6 +1,6 @@
-<p align="center"><img src="src/sgh_x458/resources/icon.png" width="128" alt="SGH-X458 游戏复刻图标"></p>
+<p align="center"><img src="src/sgh_x458/resources/icon.png" width="128" alt="SGH-X458游戏图标"></p>
 
-# SGH-X458 游戏复刻
+# SGH-X458游戏
 
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Platform Windows and Android](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-0078D6)
