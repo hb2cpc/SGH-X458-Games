@@ -1,0 +1,127 @@
+plugins {
+    id 'com.android.application' version '8.11.0'
+    id 'com.chaquo.python' version '17.2.0'
+}
+
+def stagedPython = layout.buildDirectory.dir('generated/gamePython')
+def gameAssets = layout.buildDirectory.dir('generated/gameAssets')
+def gameAudio = layout.buildDirectory.dir('generated/gameAudio')
+def core = file('../../src')
+def screenshots = file('../../docs/images')
+def games = [
+    x_fighter: 'x_fighter-1-menu', spacewar: 'spacewar-1-menu', mypet: 'mypet-2-room',
+    bubble_smile: 'bubble_smile-play', fun2link: 'fun2link-play', ultimate_golf: 'ultimate_golf-play'
+]
+def buildPythonCommand = providers.gradleProperty('gamePython').orElse('python')
+def targetAbis = ['arm64-v8a', 'x86_64']
+def minimumSdk = 24
+def slimmer = file('../slim_python.py')
+
+android {
+    namespace 'io.github.hb2cpc.sghx458'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'io.github.hb2cpc.sghx458'
+        minSdk minimumSdk
+        targetSdk 36
+        versionCode 2
+        versionName '1.0.1'
+    }
+    flavorDimensions 'architecture'
+    productFlavors {
+        arm64 {
+            dimension 'architecture'
+            ndk { abiFilters targetAbis[0] }
+        }
+        emulator {
+            dimension 'architecture'
+            ndk { abiFilters targetAbis[1] }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    sourceSets.main.assets.srcDirs(gameAssets, gameAudio)
+    androidResources {
+        noCompress += 'ogg'
+    }
+    packaging {
+        // Compressed libraries halve the download; Android unpacks them when it installs the app.
+        jniLibs.useLegacyPackaging = true
+    }
+}
+
+chaquopy {
+    defaultConfig {
+        version '3.12'
+        buildPython buildPythonCommand.get()
+        extractPackages 'sgh_x458'
+    }
+    sourceSets.main.srcDir(stagedPython)
+}
+
+def stageGamePython = tasks.register('stageGamePython', Sync) {
+    from(core) {
+        include 'sgh_x458/**/*.py', 'sgh_x458/**/assets/manifest.json',
+                'sgh_x458/**/assets/runtime-data.bin'
+        exclude '**/__main__.py', '**/play.py', '**/launcher.py', '**/java_desktop.py',
+                '**/keys.py'
+    }
+    includeEmptyDirs = false
+    into(stagedPython)
+}
+
+def stageGameAssets = tasks.register('stageGameAssets', Sync) {
+    from(games.keySet().collect { game -> new File(screenshots, games[game] + '.png') }) {
+        into 'previews'
+        rename { name -> games.find { game, image -> name == image + '.png' }.key + '.png' }
+    }
+    from('../../LICENSE') { into 'licenses' }
+    into(gameAssets)
+}
+
+def encodeGameAudio = tasks.register('encodeGameAudio', Exec) {
+    def encoder = file('../prepare_audio.py')
+    inputs.files(encoder, file('../../src/sgh_x458/x_fighter/audio_mix.py'))
+    inputs.files(fileTree(core) { include '**/firmware_wav/*.wav' })
+    inputs.property('games', games.keySet().join(','))
+    outputs.dir(gameAudio)
+    doFirst {
+        delete(gameAudio)
+        gameAudio.get().asFile.mkdirs()
+        commandLine([buildPythonCommand.get(), '-B', encoder, gameAudio.get().asFile] + games.keySet())
+    }
+}
+
+// Trim what Chaquopy generates before it is hashed into build.json and packaged.
+def slim = { task, command, extra ->
+    task.inputs.file(slimmer)
+    task.doLast {
+        logger.lifecycle(providers.exec {
+            commandLine([buildPythonCommand.get(), '-B', slimmer, command, task.outputs.files.singleFile] + extra)
+        }.standardOutput.asText.get().trim())
+    }
+}
+
+tasks.configureEach { task ->
+    if (name.startsWith('merge') && name.endsWith('PythonSources')) {
+        dependsOn(stageGamePython)
+    }
+    if (name.startsWith('merge') && name.endsWith('Assets')) {
+        dependsOn(stageGameAssets, encodeGameAudio)
+    }
+    def generated = name =~ /^generate(\w+)Python(MiscAssets|SourceAssets|JniLibs)$/
+    if (generated.matches()) {
+        def (variant, kind) = [generated.group(1), generated.group(2)]
+        if (kind == 'MiscAssets') {
+            def sources = tasks.named("merge${variant}PythonSources")
+            inputs.files(sources)
+            slim(task, 'runtime', [sources.get().outputs.files.singleFile])
+        } else if (kind == 'SourceAssets') {
+            slim(task, 'app', [])
+        } else {
+            slim(task, 'native', [androidComponents.sdkComponents.sdkDirectory.get().asFile, minimumSdk])
+        }
+    }
+}
