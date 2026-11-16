@@ -1,7 +1,9 @@
 """Standalone Python implementation of the extracted X-Fighter control flow."""
 
+from sgh_x458.runtime.bitmap_draw import DRAW_STATE
 from sgh_x458.runtime.score_editor import ScoreEditor
 from sgh_x458.runtime.translated_runtime import TranslatedGame
+from sgh_x458.runtime.word_ops import signed
 
 from .game_flow import BLOCKS
 from .game_rules import (
@@ -17,6 +19,10 @@ LASER_DEATH_RETURN = 0x2337FE
 HANDSET_LASER_DEATH_MS = 382
 FIRE_PRIMARY = 0x23060A
 ENTER_BATTLE = 0x235AA4
+COMBAT_KEY = 0x234724
+BATTLE_FRAME = 0x23589C
+FILL_FIRST_PIXEL = 0x229E88
+SOLID_PIXEL = 0x22A26D
 
 
 class Game(ScoreEditor, TranslatedGame):
@@ -36,8 +42,10 @@ class Game(ScoreEditor, TranslatedGame):
         self.handset_timing = handset_timing
         self.invincible = False
         self.auto_fire = True
+        self.drawing = True
         self.primary_fire_requested = False
         self.equipment = None
+        self.redraw_ram = None
         self.rules.update({
             0x22FE50: lambda: activate_nuclear_attack(self),
             0x22FF54: lambda: collect_power_up(self, self.r[0]),
@@ -47,13 +55,53 @@ class Game(ScoreEditor, TranslatedGame):
             0x230744: lambda: move_player(self, False),
             0x230768: lambda: move_player(self, True),
             0x234480: lambda: scroll_and_spawn(self),
-            0x234724: lambda: handle_combat_key(self),
+            COMBAT_KEY: lambda: handle_combat_key(self),
+            FILL_FIRST_PIXEL: self.fill_rectangle,
             0x235600: self.finish_explosion,
             0x235ABA: self.battle_tick,
         })
 
     def close(self):
         self.rules.clear()
+        self.redraw_ram = None
+
+    def apply_battle_key(self, code):
+        """Handle a mobile combat key and redraw between scheduled world updates."""
+        self.key(code)
+        if self.word(BATTLE_KEY) != code:
+            return
+        self.call(COMBAT_KEY)
+
+        # The firmware's compositor can also advance effects such as a bomb flash.
+        # Compose into scratch RAM so those effects only advance on a world update.
+        ram, registers = self.ram, self.r
+        flags = self.n, self.z, self.c, self.v
+        if self.redraw_ram is None:
+            self.redraw_ram = ram.copy()
+        else:
+            self.redraw_ram[:] = ram
+        self.ram, self.r = self.redraw_ram, registers.copy()
+        try:
+            self.call(BATTLE_FRAME)
+        finally:
+            self.ram, self.r = ram, registers
+            self.n, self.z, self.c, self.v = flags
+
+    def fill_rectangle(self):
+        """Draw the clipped RGB565 rectangle by rows, then run the last pixel normally."""
+        r = self.r
+        if self.word(DRAW_STATE + 60) == SOLID_PIXEL:
+            left, right = signed(r[4]), signed(r[6])
+            top, bottom = signed(r[7]), signed(r[5])
+            if self.load_value(self, DRAW_STATE + 0x46, 1) != 4:
+                stride = self.load_value(self, DRAW_STATE + 0x42, 2) * 2
+                row = self.read(DRAW_STATE + 0x44, 2) * (right - left + 1)
+                offset = self.word(DRAW_STATE + 8) - self.ram_base + top * stride + left * 2
+                for _ in range(top, bottom + 1):
+                    self.ram[offset:offset + len(row)] = row
+                    offset += stride
+            r[4], r[7] = r[6], r[5]
+        return self.blocks[FILL_FIRST_PIXEL](self, r, self.load_value, self.store_value)
 
     def set_player_rules(self, reserve_lives, movement_step):
         if not 0 <= reserve_lives <= 99 or not 1 <= movement_step <= 128:

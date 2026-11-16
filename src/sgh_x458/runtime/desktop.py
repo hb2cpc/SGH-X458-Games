@@ -141,7 +141,7 @@ class Sound:
             else:
                 self.channel = pygame.mixer.Channel(0)
 
-    def play(self, request):
+    def play(self, request, *, loops=0):
         if self.channel is None:
             return
         if request is None:
@@ -155,7 +155,7 @@ class Sound:
             path = self.resolve_clip(request)
             if path not in self.clips:
                 self.clips[path] = self.load_clip(path)
-            self.channel.play(self.clips[path])
+            self.channel.play(self.clips[path], loops=loops)
             self.request = request
 
     def active_request(self):
@@ -181,11 +181,12 @@ def percent(text):
     return value
 
 
-def add_play_options(parser, *, language_help=None):
+def add_play_options(parser, *, language_help=None, language=True):
     parser.add_argument("--size", choices=WINDOW_SIZES, default=DEFAULT_SIZE)
     parser.add_argument("--volume", type=percent, default=DEFAULT_VOLUME)
     parser.add_argument("--mute", action="store_true")
-    parser.add_argument("--language", type=int, choices=range(3), default=1, help=language_help)
+    if language:
+        parser.add_argument("--language", type=int, choices=range(3), default=1, help=language_help)
     parser.add_argument("--speed", choices=SPEED_QUARTERS, default=DEFAULT_SPEED)
 
 

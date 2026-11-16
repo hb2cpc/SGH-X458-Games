@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sgh-x458-games"
 version = "1.0.0"
-description = "Desktop ports of the three Anycall SGH-X458 firmware games"
+description = "Desktop ports of six Anycall SGH-X458 firmware games"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -29,3 +29,6 @@ where = ["src"]
 "sgh_x458.x_fighter" = ["assets/**/*"]
 "sgh_x458.spacewar" = ["assets/**/*"]
 "sgh_x458.mypet" = ["assets/**/*"]
+"sgh_x458.bubble_smile" = ["assets/**/*"]
+"sgh_x458.fun2link" = ["assets/**/*"]
+"sgh_x458.ultimate_golf" = ["assets/**/*"]

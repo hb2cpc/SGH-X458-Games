@@ -1,0 +1,92 @@
+{
+  "midlet": "BubbleSmile",
+  "jar_rom": "0x391DC5",
+  "jar_size": 98997,
+  "jar_sha256": "48f87f5233417059511a3f5463b81ebd33683c00bc27ef6342f24af5e3037d68",
+  "audio": [
+    {
+      "address": "0x39A821",
+      "size": 955,
+      "file": "audio/original/39A821.mmf",
+      "sha256": "80619d00383e6fc83025d22d04c37ce03d4614b512ceb796e758fb1b8ec660db",
+      "resource": "/1.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x39AB98",
+      "size": 909,
+      "file": "audio/original/39AB98.mmf",
+      "sha256": "1adaeb82f1a2fee0ced8e3a3c044007fb1a2be71e90b22e47431416d35bc8363",
+      "resource": "/2.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x39AF29",
+      "size": 3373,
+      "file": "audio/original/39AF29.mmf",
+      "sha256": "118699d2dfa10d91cb49245884c40ff9d67f058cf6ebbdf33fe6ba4c3bfadec1",
+      "resource": "/3.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x39BA63",
+      "size": 725,
+      "file": "audio/original/39BA63.mmf",
+      "sha256": "8c91514bbcde647c58e0ca6088bf2540035e3c67cc8cd6a007509fc0bf34c965",
+      "resource": "/4.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x39BD50",
+      "size": 451,
+      "file": "audio/original/39BD50.mmf",
+      "sha256": "c8c0aa937245294faca352d78df30155d5b83d5e9666d9533483e2faac52cedc",
+      "resource": "/5.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x39BF35",
+      "size": 3429,
+      "file": "audio/original/39BF35.mmf",
+      "sha256": "fef8db3ff642a20c011d726d514a6dc5369dd8a7f1281f086974eb1d9e303b46",
+      "resource": "/6.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x39CA08",
+      "size": 552,
+      "file": "audio/original/39CA08.mmf",
+      "sha256": "e37d0bd5582e05552dbd07c72653b377e4dcbdcf499ff9d96d592b80956a64bb",
+      "resource": "/7.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    }
+  ]
+}

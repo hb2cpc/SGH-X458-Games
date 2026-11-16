@@ -1,0 +1,46 @@
+{
+  "midlet": "MIDPUGC",
+  "jar_rom": "0x3C2E02",
+  "jar_size": 97115,
+  "jar_sha256": "f3bc8be99b43a08b1dacd2997f029bfbe620221dfd5c8d2f84efb2f8905c7cda",
+  "audio": [
+    {
+      "address": "0x3D634A",
+      "size": 1103,
+      "file": "audio/original/3D634A.mmf",
+      "sha256": "b49216dd4d83227714481eeffc5ff6d5c232d339f55590d04c8a8d99b034a126",
+      "resource": "/golf/res/mid/end.mmf",
+      "tracks": [
+        "CNTI",
+        "MTR\u0001",
+        "MTR\u0002",
+        "MTR\u0003"
+      ]
+    },
+    {
+      "address": "0x3D6648",
+      "size": 252,
+      "file": "audio/original/3D6648.mmf",
+      "sha256": "ecdfab2a7e3568beaee407e9c225aa05b8695e782fb8c8b78c43ce1dff7ed9b6",
+      "resource": "/golf/res/mid/holein.mmf",
+      "tracks": [
+        "CNTI",
+        "MTR\u0001"
+      ]
+    },
+    {
+      "address": "0x3D675E",
+      "size": 2047,
+      "file": "audio/original/3D675E.mmf",
+      "sha256": "b4531f8c4a6b513873fc83d05c2b5e117bc6ded868084d61eccee87c246ccd36",
+      "resource": "/golf/res/mid/start.mmf",
+      "tracks": [
+        "CNTI",
+        "MTR\u0001",
+        "MTR\u0002",
+        "MTR\u0003",
+        "MTR\u0004"
+      ]
+    }
+  ]
+}

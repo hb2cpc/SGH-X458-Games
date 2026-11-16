@@ -1,4 +1,4 @@
-"""Shared Windows launcher for the three SGH-X458 games."""
+"""Shared Windows launcher for the SGH-X458 games."""
 
 import json
 import os
@@ -20,7 +20,17 @@ from sgh_x458.x_fighter import layout as x_fighter
 FROZEN = getattr(sys, "frozen", False)
 SETTINGS_PATH = data_directory() / "launcher.json"
 # Launcher label -> subpackage of sgh_x458.
-GAMES = {"X-战机": "x_fighter", "空间大战": "spacewar", "我的宠物": "mypet"}
+JAVA_GAMES = {
+    "BubbleSmile": "bubble_smile",
+    "Fun2Link": "fun2link",
+    "Ultimate Golf Challenge": "ultimate_golf",
+}
+LEGACY_GAME_NAMES = {
+    "泡泡消除": "BubbleSmile", "油管连接": "Fun2Link", "终极高尔夫": "Ultimate Golf Challenge",
+}
+HEADING_SIZE = 24
+GAMES = {"X-战机": "x_fighter", "空间大战": "spacewar", "我的宠物": "mypet", **JAVA_GAMES}
+SPEED_ONLY = ("mypet", *JAVA_GAMES.values())
 KEY_GUIDES = {
     "x_fighter": (
         ("标题菜单", "Enter／1 开始，2 最高分，3 帮助，4 继续"),
@@ -45,6 +55,22 @@ KEY_GUIDES = {
         ("宠物房间", "←／→、A／D 或 4／6 选图标，Enter／空格确认"),
         ("返回与退出", "Esc／Backspace 返回，标题菜单按 Esc 退出"),
     ),
+    "bubble_smile": (
+        ("选择与确认", "↑／↓ 或 W／S，Enter／空格／5 确认"),
+        ("移动光标", "方向键／WASD／2、4、6、8"),
+        ("旋转泡泡", "1／3，凑成三个及以上同色泡泡"),
+        ("保存与返回", "Esc／Backspace／#"),
+    ),
+    "fun2link": (
+        ("选择与确认", "↑／↓ 或 W／S，Enter／空格／5 确认"),
+        ("铺设管段", "方向键／WASD／2、4、6、8 移动，5 放置"),
+        ("加速与返回", "* 加速流动，Esc／Backspace／# 返回"),
+    ),
+    "ultimate_golf": (
+        ("选择与确认", "方向键／WASD／2、4、6、8，Enter／空格／5 确认"),
+        ("击球", "1／3 调整方向，7／9 选杆，5 操作力度条"),
+        ("其他操作", "方向键移动地图，0 切换视角，Esc／Backspace／# 返回"),
+    ),
 }
 SCENES = {"标题菜单": "menu", "战斗进度": "battle", "Boss 战": "boss"}
 AIRCRAFT = {"速度+": "1", "攻击+": "2", "防御+": "3"}
@@ -57,7 +83,7 @@ DEFAULTS = {
     "shield": "关闭", "bombs": str(x_fighter.DEFAULT_BOMBS), "speed": DEFAULT_SPEED,
     "spacewar_scene": "标题菜单", "spacewar_stage": "1", "spacewar_lives": str(spacewar.DEFAULT_LIVES),
     "spacewar_item": "无", "spacewar_speed": DEFAULT_SPEED, "spacewar_invincible": False,
-    "mypet_speed": DEFAULT_SPEED,
+    **{f"{game}_speed": DEFAULT_SPEED for game in SPEED_ONLY},
     "size": next(label for label, key in SIZES.items() if key == DEFAULT_SIZE),
     "mute": False, "volume": str(DEFAULT_VOLUME),
 }
@@ -67,7 +93,7 @@ CHOICES = {
     "shield": ("关闭", "开启"), "speed": SPEED_QUARTERS, "size": SIZES,
     "spacewar_scene": SPACEWAR_SCENES, "spacewar_stage": tuple(map(str, spacewar.STAGES)),
     "spacewar_item": SPACEWAR_ITEMS, "spacewar_speed": SPEED_QUARTERS,
-    "mypet_speed": SPEED_QUARTERS,
+    **{f"{game}_speed": SPEED_QUARTERS for game in SPEED_ONLY},
 }
 assert set(SPACEWAR_SCENES.values()) == set(spacewar.SCENES)
 assert set(SPACEWAR_ITEMS.values()) == set(spacewar.ITEMS)
@@ -83,6 +109,8 @@ def load_options():
     options = DEFAULTS.copy()
     for name, default in DEFAULTS.items():
         value = saved.get(name)
+        if name == "game" and isinstance(value, str):
+            value = LEGACY_GAME_NAMES.get(value, value)
         if name == "bombs" and isinstance(value, str):
             try:
                 value = number(value, "炸弹数量", x_fighter.MAX_BOMBS)
@@ -113,8 +141,8 @@ def arguments(game, options):
     args = ["--size", SIZES[options["size"]], "--volume", volume]
     if options["mute"]:
         args.append("--mute")
-    if game == "mypet":
-        return args + ["--speed", options["mypet_speed"]]
+    if game in SPEED_ONLY:
+        return args + ["--speed", options[f"{game}_speed"]]
     if game == "spacewar":
         args += [
             "--scene", SPACEWAR_SCENES[options["spacewar_scene"]],
@@ -171,11 +199,18 @@ class Launcher:
         window.rowconfigure(0, weight=1)
         panel.columnconfigure((0, 1), weight=1, uniform="options")
         panel.rowconfigure(1, weight=1)
-        self.heading = ttk.Label(panel, font=(family, 24, "bold"))
-        self.heading.grid(row=0, column=0, sticky="w")
-        game = ttk.Combobox(panel, textvariable=self.options["game"], values=tuple(GAMES),
-                            width=15, state="readonly")
-        game.grid(row=0, column=1, sticky="e")
+        header = ttk.Frame(panel)
+        header.grid(row=0, column=0, columnspan=2, sticky="ew")
+        header.columnconfigure(0, weight=1)
+        self.heading_font = font.Font(family=family, size=HEADING_SIZE, weight="bold")
+        # Reserve the original title height without letting its text set the window width.
+        self.heading = ttk.Label(header, font=self.heading_font, width=1)
+        header.rowconfigure(0, minsize=self.heading.winfo_reqheight())
+        self.heading.grid(row=0, column=0, sticky="ew")
+        self.heading.bind("<Configure>", self.fit_heading)
+        game = ttk.Combobox(header, textvariable=self.options["game"], values=tuple(GAMES),
+                            width=max(map(len, GAMES)) + 1, state="readonly")
+        game.grid(row=0, column=1, sticky="e", padx=(16, 0))
         game.bind("<<ComboboxSelected>>", self.refresh)
 
         # Each game has its own option panels; refresh() shows the selected one.
@@ -202,11 +237,12 @@ class Launcher:
         self.field(feature_box, 2, "初始道具", "spacewar_item")
         self.field(feature_box, 3, "游戏倍速", "spacewar_speed")
 
-        mypet_box = ttk.LabelFrame(panel, text="游戏设置", padding=12)
-        mypet_box.grid(row=1, column=0, columnspan=2, sticky="new", pady=(14, 0))
-        mypet_box.columnconfigure(1, weight=1)
-        self.panels["mypet"] = (mypet_box,)
-        self.field(mypet_box, 0, "游戏倍速", "mypet_speed")
+        for name in SPEED_ONLY:
+            box = ttk.LabelFrame(panel, text="游戏设置", padding=12)
+            box.grid(row=1, column=0, columnspan=2, sticky="new", pady=(14, 0))
+            box.columnconfigure(1, weight=1)
+            self.panels[name] = (box,)
+            self.field(box, 0, "游戏倍速", f"{name}_speed")
 
         media = ttk.LabelFrame(panel, text="画面与声音", padding=12)
         media.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(14, 0))
@@ -267,6 +303,16 @@ class Launcher:
     def selected_game(self):
         return GAMES[self.options["game"].get()]
 
+    def fit_heading(self, _event=None):
+        width = self.heading.winfo_width() - 4
+        if width <= 0:
+            return
+        title = self.heading["text"]
+        for size in range(HEADING_SIZE, 0, -1):
+            self.heading_font.configure(size=size)
+            if self.heading_font.measure(title) <= width:
+                break
+
     def refresh(self, _event=None):
         game = self.selected_game()
         for name, frames in self.panels.items():
@@ -274,6 +320,7 @@ class Launcher:
                 frame.grid() if name == game else frame.grid_remove()
         self.key_panels[game].tkraise()
         self.heading.configure(text=self.options["game"].get())
+        self.fit_heading()
         scene = SCENES[self.options["scene"].get()]
         self.stage.configure(state="disabled" if scene == "menu" else "readonly")
         self.aircraft.configure(state="disabled" if scene == "menu" else "readonly")

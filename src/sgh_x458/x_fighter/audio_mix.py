@@ -4,7 +4,6 @@ from array import array
 from math import cos, sin, sqrt, tau
 
 from sgh_x458.runtime.desktop import DEFAULT_VOLUME, load_sound_clip
-import pygame
 
 
 PLAYBACK_GAIN = DEFAULT_VOLUME / 100
@@ -47,6 +46,8 @@ def high_pass(pcm, rate, channels, cutoff):
 
 
 def load_game_clip(path, gain=PLAYBACK_GAIN):
+    import pygame
+
     clip = load_sound_clip(path)
     cutoff = EFFECT_CUTOFF_HZ.get(path.stem)
     if cutoff:

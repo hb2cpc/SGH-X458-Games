@@ -2,20 +2,20 @@
 
 import argparse
 import json
-from collections import deque
 from functools import partial
 
 import pygame
 
 from sgh_x458.runtime.desktop import (
-    DEFAULT_SPEED, WINDOW_SIZES, KeyControls, ScoreFile, Sound, add_play_options, data_directory,
-    open_game_display, run_game_loop, style_start_menu,
+    DEFAULT_SPEED, WINDOW_SIZES, ScoreFile, Sound, add_play_options, data_directory,
+    open_game_display, run_game_loop,
 )
 from sgh_x458.runtime.keys import DIGITS, WASD, score_entry_key
 from sgh_x458.runtime.resume import ResumeSlot
 from sgh_x458.runtime.score_editor import SCORE_ENTRY
 
 from .audio_mix import load_game_clip
+from .controls import BattleInput, phone_code
 from .game import Game
 from .layout import ASSETS, DEFAULT_BOMBS, MAX_BOMBS
 from .practice import SCENES, start_scene
@@ -24,112 +24,28 @@ from .practice import SCENES, start_scene
 SAVE_PATH = data_directory() / "X-Fighter" / "scores.bin"
 PRACTICE_SAVE = SAVE_PATH.with_name("practice-scores.bin")
 AUDIO_PATH = ASSETS / "audio"
-REPEATABLE = {1, 4, 5, 6, 7}
+KEYS = {
+    pygame.K_UP: "up", pygame.K_DOWN: "down", pygame.K_LEFT: "left", pygame.K_RIGHT: "right",
+    pygame.K_RETURN: "ok", pygame.K_SPACE: "ok", pygame.K_ESCAPE: "back", pygame.K_BACKSPACE: "back",
+    pygame.K_z: "missile", pygame.K_x: "bomb",
+}
 
 
-def saved_equipment(metadata):
-    """Starting equipment the saved game had not received yet."""
-    if "equipment" in metadata:
-        return metadata["equipment"] or ()
-    # Earlier slots kept the launch options in the profile: upgraded, shield, bombs.
-    return metadata["profile"][5:8] if metadata.get("pending_equipment") else ()
-
-
-def phone_key(key, game):
-    key = WASD.get(key, key)
-    if key in DIGITS:
-        return DIGITS[key]
-    if key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
-        return 23
-    if game.ui_state == 0:
-        return {pygame.K_RETURN: 1, pygame.K_SPACE: 1}.get(key)
-    if game.ui_state in (3, 4):
-        return {pygame.K_RETURN: 30, pygame.K_SPACE: 30,
-                pygame.K_UP: 1, pygame.K_DOWN: 7, pygame.K_LEFT: 4, pygame.K_RIGHT: 5}.get(key)
-    if game.state == 2:
-        return {pygame.K_UP: 1, pygame.K_DOWN: 7, pygame.K_RETURN: 9, pygame.K_SPACE: 9}.get(key)
-    if game.state == 4:
-        return {pygame.K_UP: 1, pygame.K_LEFT: 4, pygame.K_RIGHT: 5, pygame.K_DOWN: 7,
-                pygame.K_SPACE: 6, pygame.K_z: 6, pygame.K_x: 9, pygame.K_RETURN: 6}.get(key)
-    return {pygame.K_RETURN: 1, pygame.K_SPACE: 1}.get(key)
-
-
-class BattleControls(KeyControls):
-    """X-Fighter input: held movement keys, queued weapons, manual fire and the resume slot.
-
-    The firmware reads one key per battle update, so key presses during battle are
-    collected here and handed to Game.advance() instead of being sent immediately.
-    """
-
-    def __init__(self, slot, sound, equipment):
-        self.slot = slot
-        self.sound = sound
-        self.equipment = equipment
-        self.held = {}
-        self.pending_actions = deque()
-        self.fire_held = False
-
-    def stop_firing(self, game):
-        self.fire_held = game.primary_fire_requested = False
-
+class BattleControls(BattleInput):
     def handle_event(self, event, game):
         if event.type == pygame.WINDOWFOCUSLOST:
-            self.held.clear()
-            self.pending_actions.clear()
-            self.stop_firing(game)
+            self.release_all(game)
         elif event.type == pygame.KEYUP:
-            self.held.pop(event.key, None)
-            if event.key == pygame.K_j:
-                self.fire_held = False
+            self.release(event.key, fire=event.key == pygame.K_j)
         elif event.type == pygame.KEYDOWN:
-            return self.key_down(event.key, game)
+            key = event.key
+            if game.ui_state == SCORE_ENTRY:
+                score_entry_key(key, game)
+            else:
+                mapped = WASD.get(key, key)
+                code = phone_code(DIGITS.get(mapped, KEYS.get(mapped)), game)
+                return self.press(game, key, code, fire=key == pygame.K_j)
         return False
-
-    def key_down(self, key, game):
-        if game.ui_state == SCORE_ENTRY:
-            score_entry_key(key, game)
-            return False
-        in_battle = game.ui_state == 1 and game.state == 4 and bool(game.timers)
-        if key == pygame.K_j:
-            if in_battle:
-                self.fire_held = game.primary_fire_requested = True
-            return False
-        code = phone_key(key, game)
-        slot = self.slot
-        can_continue = slot is not None and slot.available
-        if game.ui_state == 0 and code == 4:
-            if can_continue:
-                game.prepare_equipment(*saved_equipment(slot.resume(game, self.sound)))
-            return False
-        if code is None:
-            return False
-        starting = game.ui_state == 0 and code == 1
-        closing = False
-        if in_battle and code in (6, 9):
-            if code not in self.pending_actions:
-                self.pending_actions.append(code)
-        elif game.key(code) == 1:
-            closing = True
-        if starting and game.ui_state == 1 and slot is not None:
-            slot.start_new_game(game)
-            game.prepare_equipment(*self.equipment)
-        if code == 23:
-            self.pending_actions.clear()
-            self.stop_firing(game)
-        if in_battle and code in REPEATABLE:
-            self.held[key] = code
-        return closing
-
-    def advance(self, game, elapsed):
-        if self.fire_held:
-            game.primary_fire_requested = True
-        game.advance(elapsed, next(reversed(self.held.values()), None), self.pending_actions)
-        if game.ui_state != 1 or game.state != 4:
-            self.pending_actions.clear()
-            self.stop_firing(game)
-
-    def style_menu(self, frame):
-        return style_start_menu(frame, disable_continue=self.slot is None or not self.slot.available)
 
 
 def run(args):
@@ -145,7 +61,7 @@ def run(args):
     game = Game(language=args.language, on_audio=startup_audio.append, save=scores.record, handset_timing=True)
 
     try:
-        start_scene(game, args.scene, args.stage, args.aircraft, args.progress)
+        start_scene(game, args.scene, args.stage, args.aircraft, args.progress, SAVE_PATH.parent)
         game.configure_practice(invincible=args.invincible, auto_fire=not args.manual_fire,
                                 upgraded=args.upgraded, shield=args.shield, bombs=bombs)
         screen = open_game_display(WINDOW_SIZES[args.size])

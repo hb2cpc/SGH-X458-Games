@@ -1,5 +1,6 @@
 * text=auto
 *.bat text eol=crlf
+/android/gradlew text eol=lf
 
 # Keep the verified firmware bytes and the generator's output line endings.
 /firmware/*.s3 binary

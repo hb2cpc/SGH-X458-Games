@@ -152,4 +152,5 @@ def update_battle(game):
     update_pickups(game)
     if game.invincible:
         restore_player_health(game)
-    game.call_rule(0x23589C)  # Compose and submit the frame.
+    if game.drawing:
+        game.call_rule(0x23589C)  # Compose and submit the frame.

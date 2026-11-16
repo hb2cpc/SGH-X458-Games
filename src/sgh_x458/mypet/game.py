@@ -20,6 +20,7 @@ FLOAT = Struct("<f")
 PET_PHASE = STATE_BASE - 4
 INTRO = 1
 READ_CLOCK = 0x22833C
+SAVE_PET = 0x237E54
 
 # Thumb-to-ARM stubs for the compiler's single-precision helper library. Pet
 # stat updates convert integer deltas to floats, scale them, sum them, then
@@ -69,6 +70,11 @@ class Game(TranslatedGame):
                 self.key(4)
             self.key(30)
         self.call(GAME_CONTROLLER, 3)
+
+    def checkpoint(self):
+        """Write the current pet and clock without leaving its room or submenu."""
+        if self.ui_state == 1 and self.word(PET_PHASE) != INTRO:
+            self.call(SAVE_PET)
 
     def int_to_float(self):
         self.r[0] = float_bits(float(signed(self.r[0], 32)))

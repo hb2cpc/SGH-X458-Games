@@ -8,7 +8,7 @@ from pathlib import Path
 
 root = Path(SPECPATH).resolve()
 src = root / "src"
-games = ("x_fighter", "spacewar", "mypet")
+games = ("x_fighter", "spacewar", "mypet", "bubble_smile", "fun2link", "ultimate_golf")
 packed_dir = root / ".local" / "package-assets"
 LZMA2 = {"id": FILTER_LZMA2, "preset": 9 | PRESET_EXTREME, "dict_size": 4 * 1024 * 1024}
 OGG_QUALITY = "6"  # Vorbis q6 (~190 kbit/s): audio shrinks from 9 MB of lossless WAV to about 2.5 MB.
@@ -54,21 +54,20 @@ a = Analysis(
     excludes=[
         # Standard library modules the games never load (imported only lazily or behind try/except).
         "_hashlib", "statistics", "unicodedata", "tarfile", "pickle", "logging", "email",
-        "importlib.metadata", "socket", "_socket", "bz2", "_bz2", "difflib", "pydoc",
-        # Optional pygame modules: graphics are RGB buffers, audio is WAV on one channel.
-        "pygame._freetype", "pygame.font", "pygame.ftfont", "pygame.sysfont", "pygame.imageext",
+        "importlib.metadata", "socket", "_socket", "bz2", "_bz2", "pydoc",
+        # Optional pygame modules outside the games' drawing and audio adapters.
+        "pygame._freetype", "pygame.ftfont",
         "pygame.pypm", "pygame.midi", "pygame.camera", "pygame.pixelarray", "pygame.scrap",
-        "pygame.mixer_music", "pygame._debug", "pygame.typing", "pygame.pkgdata",
+        "pygame.mixer_music", "pygame._debug", "pygame.typing",
     ],
     optimize=2,
 )
 
-# Rendering uses RGB buffers and playback uses PCM WAV. Keep SDL and its mixer.
+# Keep SDL's drawing, font, image and audio libraries for the desktop adapters.
 unused_dlls = {
-    "freetype.dll", "libjpeg-62.dll", "libogg-0.dll", "libopus-0.dll",
-    "libopusfile-0.dll", "libpng16-16.dll", "libtiff-5.dll", "libwavpack-1.dll",
-    "libwebp-7.dll", "libwebpdemux-2.dll", "libxmp.dll", "portmidi.dll",
-    "sdl2_image.dll", "sdl2_ttf.dll",
+    "libogg-0.dll", "libopus-0.dll",
+    "libopusfile-0.dll", "libwavpack-1.dll",
+    "libxmp.dll", "portmidi.dll",
     # The Universal C Runtime ships with Windows 10 and 11. VCRUNTIME140 stays.
     "ucrtbase.dll",
 }
@@ -84,8 +83,6 @@ a.binaries = [
 
 def needed_data(name):
     path = Path(name).as_posix()
-    if path == "pygame/freesansbold.ttf":
-        return False
     # The launcher needs Tcl/Tk scripts and ttk themes only: no time zones, translations,
     # demo images or obsolete packages. Keep the Windows code page encodings.
     if path.startswith(("_tcl_data/tzdata/", "_tcl_data/msgs/", "_tk_data/msgs/", "_tk_data/images/",

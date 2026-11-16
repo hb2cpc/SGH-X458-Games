@@ -1,6 +1,6 @@
 # 固件与共用调度
 
-三款游戏共用的固件格式、游戏注册表、系统服务地址和逆向方法。各游戏自己的地址和逆向记录见 [X-战机](x_fighter.md)、[空间大战](spacewar.md)、[我的宠物](mypet.md)。
+本文记录固件格式、三款原生游戏的共用调度，以及固件中另外三款预置 Java 游戏的位置和资源。原生游戏各自的逆向记录见 [X-战机](x_fighter.md)、[空间大战](spacewar.md)、[我的宠物](mypet.md)。
 
 ## 固件文件
 
@@ -37,7 +37,25 @@
 - 两款游戏共用的成绩录入在光标右移时会拼接 ROM `0x22BB54` 的空格字符串。`tools/x_fighter/lift.py` 与 `tools/spacewar/extract.py` 都显式打包了 `0x22BB50–0x22BB60`，重做离线提取时不可省略。
 - 成绩录入是共用调度器的 UI：光标 `0x0103EFDC`、名字缓冲指针 `0x0103EFE8`、上限 10 字符、绘制入口 `0x22B5C6`。桌面版用 Python 的 `type_score_character()` 直接写 ASCII 并调用绘制例程刷新 RGB565 帧，绕过手机九宫格多击；`src/sgh_x458/runtime/score_editor.py` 提供两款游戏共用的实现，`runtime/keys.py` 处理桌面键盘映射。
 
-## 复刻方法
+## 预置 Java 游戏
+
+`X458ZCEK1` 的 `e:\S100\suites.utf`（ROM `0x3DAAD4–0x3DAB5B`）列出 Bubble Smile、Fun2 Link 和 Ultimate Golf Challenge。固件文件表在每条 `_suite.jar` 路径前存有两个小端 32 位字段，分别是 JAR 字节数和 ROM 起始地址。文件表给出的范围与 ZIP 中央目录计算出的范围一致，三个包均通过了逐条 CRC 校验。包内清单声明版本均为 1.0，环境为 CLDC 1.0 / MIDP 1.0，入口类都继承 `javax.microedition.midlet.MIDlet`。
+
+| 游戏 | JAR 文件及入口类 | ROM 范围（左闭右开） | 字节数 | 文件表中的长度字段 |
+|---|---|---|---:|---|
+| BubbleSmile | `BubbleSmile.jar` · `BubbleSmile` | `0x391DC5–0x3AA07A` | 98,997 | `0x6818CC` |
+| Fun2Link | `Fun2Link.jar` · `Fun2Link` | `0x3AA24E–0x3C2C31` | 100,835 | `0x681EEC` |
+| Ultimate Golf Challenge | `MIDPUGC.jar` · `MIDPUGC` | `0x3C2E02–0x3DA95D` | 97,115 | `0x68250C` |
+
+用本页的 `load_rom()` 读取固件，再按表中的起止地址切片即可得到原始 JAR。Fun2Link 紧邻 JAR 的 `_suite.jad` 位于 `0x3AA1B0–0x3AA24E`，其中的 `MIDlet-Jar-Size` 写的是 100,011。提取应使用文件表及 ZIP 目录确认的 100,835 字节。
+
+- **BubbleSmile（ZIO Interactive）**。按 `2/4/6/8` 移动光标，`1/3` 旋转相邻泡泡。三个或更多同色泡泡排成一直线时消除，`Checker` 检查横向和两个斜向。`BubbleGameMode` 包含计时和技巧两种模式，分别消耗时间和旋转次数。包内有 23 个类、10 张 PNG 和 7 段 MMF，原始帮助图是 128×160 的 `howtoplay.png`。旋转、消除和补位分别可以从 `BubbleControllerRotator`、`Checker` 和 `BubbleControllerDownAndFill` 追踪。
+- **Fun2Link**。倒计时内铺设管段，接通油源和终点并满足关卡的连接要求。包内有 `data/stage.0` 至 `data/stage.20`。`stage.0` 用于玩法演示，正篇为 1–20 关。`Board.read` 解析文本地图，`LinkCheck` 和 `CheckWater` 处理管线连通及流动判定。`icons/main.png` 是 128×160 的标题图，`icons/pipes.png` 是管件图集，`sound/` 包含 7 段 MMF。
+- **Ultimate Golf Challenge（ZIO Interactive）**。有 3、6、9、18 洞赛制，包含选杆、瞄准、挥杆力度、风向和推杆。18 张球场图在 `golf/res/map/1.zio` 至 `18.zio`，每张 2,010 字节。`golfCanvas` 依次读取 9 个小端 16 位头字段、4 组各 189 个值和 1 组 240 个值，标准杆数来自 `par.bin`。`golf/res/png/` 的 18 个 `.pna` 文件均可拆成 PNG，格式为小端 32 位图片数量、各图字节长度和连续 PNG 数据。包内有 3 段 MMF。`PlaySound` 还引用了包中缺少的 `select.mmf`，菜单操作的实际声音待对照。
+
+这三款游戏的 Java 字节码可以直接用 `javap -p -c` 检查。它们使用 MIDP 的界面、按键和 RMS 存档接口，并用三星的 `com.samsung.util.AudioClip` 播放 MMF。项目中的 Python 运行层接入这些接口，原包提取和桌面验证命令见 [Java 游戏说明](java_games.md)。
+
+## 原生游戏复刻方法
 
 新游戏或新场景按以下顺序逆向和移植。
 

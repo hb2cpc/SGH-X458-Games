@@ -1,0 +1,92 @@
+{
+  "midlet": "Fun2Link",
+  "jar_rom": "0x3AA24E",
+  "jar_size": 100835,
+  "jar_sha256": "281a03f752f060b9a42adf7af4832ea083f123302ddc43478f3e9cd2740a480c",
+  "audio": [
+    {
+      "address": "0x3BB615",
+      "size": 7498,
+      "file": "audio/original/3BB615.mmf",
+      "sha256": "438da0932e5627fe5db6fd7f4ffacade17364d059358e987cd5b218286ef2f8b",
+      "resource": "/sound/clearshot.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x3BD0E2",
+      "size": 3864,
+      "file": "audio/original/3BD0E2.mmf",
+      "sha256": "e32192615bba3c52c1c92e02ab84f7b7f493165383abf7672adcaf2276630e34",
+      "resource": "/sound/explode.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x3BDF07",
+      "size": 524,
+      "file": "audio/original/3BDF07.mmf",
+      "sha256": "f1f6d9067c6b8e83c3590721e26b2524ef3f7129300cdf0efdceaa77b0b60e82",
+      "resource": "/sound/gunshot.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x3BE142",
+      "size": 552,
+      "file": "audio/original/3BE142.mmf",
+      "sha256": "e37d0bd5582e05552dbd07c72653b377e4dcbdcf499ff9d96d592b80956a64bb",
+      "resource": "/sound/select.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x3BE398",
+      "size": 1245,
+      "file": "audio/original/3BE398.mmf",
+      "sha256": "d5cb740e5848359d37ec325073a37ef31adf17350afdf9dad04ab4b0a109f3a4",
+      "resource": "/sound/selectok.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x3BE879",
+      "size": 5026,
+      "file": "audio/original/3BE879.mmf",
+      "sha256": "4c422ced454e91ee5261210be6f9d223f89fc8d2026b4bb0b8699c1ac8a777f9",
+      "resource": "/sound/stagestart.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    },
+    {
+      "address": "0x3BFAC3",
+      "size": 8004,
+      "file": "audio/original/3BFAC3.mmf",
+      "sha256": "ba7e09c828306c2afacee34046572aa9466603953b1c3f8193daa57bdc9c4e1f",
+      "resource": "/sound/titlesound.mmf",
+      "tracks": [
+        "CNTI",
+        "OPDA",
+        "MTR\u0005"
+      ]
+    }
+  ]
+}

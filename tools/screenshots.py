@@ -9,6 +9,7 @@ filtering, exactly as the desktop window shows it. Run from the project root:
 import argparse
 import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -29,7 +30,10 @@ UP, LEFT, RIGHT, DOWN = 2, 4, 6, 8
 
 def save(game, path):
     frame = style_start_menu(game.frame) if game.ui_state == 0 else game.frame
-    surface = rgb565_surface(frame, (WIDTH, HEIGHT))
+    save_surface(rgb565_surface(frame, (WIDTH, HEIGHT)), path)
+
+
+def save_surface(surface, path):
     pygame.image.save(pygame.transform.scale(surface, (WIDTH * SCALE, HEIGHT * SCALE)), str(path))
     print(f"wrote {path}")
 
@@ -112,12 +116,43 @@ def mypet(output):
     save(game, output / "mypet-3-doctor.png")
 
 
+def java_games(output):
+    from tools.java_games.verify import advance, bubble_idle, play, press, wait_for
+
+    pygame.font.init()
+    with TemporaryDirectory(prefix="sgh-x458-screenshots-") as tmp:
+        saves = Path(tmp)
+        with play("bubble_smile", saves) as app:
+            advance(app, 1440)
+            for key in "555":
+                press(app, key)
+            wait_for(app, lambda: bubble_idle(app))
+            for key in "242631":
+                press(app, key, 0)
+                wait_for(app, lambda: bubble_idle(app))
+            save_surface(app.surface, output / "bubble_smile-play.png")
+        with play("fun2link", saves) as app:
+            press(app, "5", 200)
+            press(app, "5", 9600)
+            for key in "658545":
+                press(app, key)
+            save_surface(app.surface, output / "fun2link-play.png")
+        with play("ultimate_golf", saves) as app:
+            advance(app, 3500)
+            for key in "55555":
+                press(app, key, 500)
+            state = app.vm.statics["golfCanvas", "gv", "[I"]
+            wait_for(app, lambda: (state[0], state[27]) == (5, 2))
+            press(app, "5", 1500)
+            save_surface(app.surface, output / "ultimate_golf-play.png")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--output", type=Path, default=PROJECT_ROOT / "docs" / "images")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    for render in (x_fighter, spacewar, mypet):
+    for render in (x_fighter, spacewar, mypet, java_games):
         render(args.output)
 
 
